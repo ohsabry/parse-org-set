@@ -28,7 +28,11 @@ describe('parseSet', () => {
     const set = parseSet(bytes)
     expect(set.version).toBe('1.3.1')
     expect(set.instruments.map((i) => i.name)).toEqual(['-', 'Oud', 'GENERAL'])
-    expect(set.instruments.map((i) => i.samples.map((s) => s.name))).toEqual([
+    const names: string[][] = []
+    for (const instrument of set.instruments) {
+      names.push(instrument.samples.map((s) => s.name))
+    }
+    expect(names).toEqual([
       ['Metronome Long', 'Metronome Short'],
       ['oud 48', 'oud 55', 'oud 60'],
       ['36 Bass Drum'],

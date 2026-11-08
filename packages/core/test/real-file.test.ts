@@ -58,23 +58,32 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
     // audio moves in small steps (a median of 5 to 7 out of ±32,768).
     const { bytes, samples } = real()
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-    const notZeroBefore = samples.filter((s) =>
-      bytes.subarray(s.audioOffset - 16, s.audioOffset).some((b) => b !== 0),
-    )
-    expect(notZeroBefore.map((s) => s.name)).toEqual([])
-    const firstSteps = samples
-      .filter((s) => s.channels === 1 && s.frames >= 2)
-      .map((s) =>
-        Math.abs(view.getInt16(s.audioOffset, true) - view.getInt16(s.audioOffset + 2, true)),
-      )
+    const notZeroBefore: string[] = []
+    const firstSteps: number[] = []
+    for (const s of samples) {
+      if (bytes.subarray(s.audioOffset - 16, s.audioOffset).some((b) => b !== 0)) {
+        notZeroBefore.push(s.name)
+      }
+      if (s.channels === 1 && s.frames >= 2) {
+        const first = view.getInt16(s.audioOffset, true)
+        const second = view.getInt16(s.audioOffset + 2, true)
+        firstSteps.push(Math.abs(first - second))
+      }
+    }
+    expect(notZeroBefore).toEqual([])
     expect(median(firstSteps)).toBeLessThan(1000)
   })
 
   test('loop points lie inside each sample', () => {
-    const outside = real().samples.filter(
-      (s) => s.loop.end >= s.frames || (s.loop.mode !== 0 && s.loop.start >= s.loop.end),
-    )
-    expect(outside.map((s) => `${s.name} at ${s.offset}`)).toEqual([])
+    const outside: string[] = []
+    for (const s of real().samples) {
+      const endOutside = s.loop.end >= s.frames
+      const backwards = s.loop.mode !== 0 && s.loop.start >= s.loop.end
+      if (endOutside || backwards) {
+        outside.push(`${s.name} at ${s.offset}`)
+      }
+    }
+    expect(outside).toEqual([])
   })
 
   test('the trailer starts like a header with an empty name (hypothesis)', () => {

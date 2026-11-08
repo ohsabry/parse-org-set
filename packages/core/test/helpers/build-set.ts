@@ -120,14 +120,18 @@ function sampleBytes(sample: FakeSample): Uint8Array {
   view.setUint32(69, loop.mode, true)
   view.setUint32(73, loop.start, true)
   view.setUint32(77, loop.end, true)
-  audio.forEach((value, i) => {
+  for (const [i, value] of audio.entries()) {
     view.setInt16(SAMPLE_HEADER_LENGTH + i * 2, value, true)
-  })
+  }
   return out
 }
 
 function concat(chunks: Uint8Array[]): Uint8Array {
-  const out = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.length, 0))
+  let length = 0
+  for (const chunk of chunks) {
+    length += chunk.length
+  }
+  const out = new Uint8Array(length)
   let at = 0
   for (const chunk of chunks) {
     out.set(chunk, at)
