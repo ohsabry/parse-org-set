@@ -12,6 +12,7 @@ import {
 import { ExtractError } from './errors/extract-error'
 import { writeExtraction } from './extract'
 import { formatSummary } from './summary'
+import { count } from './utils'
 
 const USAGE = `Usage:
   parse-org-set inspect <file.Set>
@@ -116,10 +117,6 @@ async function loadSet(
     }
     throw error
   }
-}
-
-function count(n: number, noun: string): string {
-  return `${n.toLocaleString('en-US')} ${noun}${n === 1 ? '' : 's'}`
 }
 
 process.exitCode = await main(process.argv.slice(2))

@@ -1,6 +1,7 @@
 import { SetFormatError } from './errors/set-format-error'
 import type { ByteReader } from './reader'
 import type { PoolEntry } from './types'
+import { startsWith } from './utils'
 
 const TITLE = 'music studio music'
 // Versions seen in real files: 1.2.8, 1.3.0, 1.3.1 and 1.4.9.
@@ -176,18 +177,9 @@ function indexOf(
   const last = Math.min(to, reader.length - needle.length)
   for (let offset = from; offset <= last; offset++) {
     reader.seek(offset)
-    if (sameBytes(reader.bytes(needle.length), needle)) {
+    if (startsWith(reader.bytes(needle.length), needle)) {
       return offset
     }
   }
   return undefined
-}
-
-function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
-  for (let i = 0; i < b.length; i++) {
-    if (a[i] !== b[i]) {
-      return false
-    }
-  }
-  return true
 }

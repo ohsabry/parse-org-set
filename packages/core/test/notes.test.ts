@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import { describeSpacing, noteLabel, noteName } from '../src/index'
+import { describeSpacing, noteLabel } from '../src/index'
+import { noteName } from '../src/notes'
 
 describe('noteName', () => {
   test('follows the MIDI convention where 60 is middle C', () => {

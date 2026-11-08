@@ -25,8 +25,8 @@ export function readInstrumentSettings(
   version: string,
 ): { kind: InstrumentKind | undefined; envelope: Envelope | undefined } {
   const envelopeStart = firstSample - ENVELOPE_FROM_END
-  // Real settings blocks are at least 128 bytes; anything shorter (like the
-  // one header that has only a name) doesn't have these fields.
+  // Real settings blocks are at least 128 bytes; a header too short to hold
+  // both fields doesn't have them.
   if (envelopeStart <= settingsStart + KIND_OFFSET) {
     return { kind: undefined, envelope: undefined }
   }

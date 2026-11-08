@@ -11,7 +11,7 @@ export interface SetFile {
 }
 
 export interface Instrument {
-  /** The instrument header's name. '-' for Shots in 1.3.x. */
+  /** The instrument header's name. The first one (Shots) is '-', or 'Constant' in 1.4.9. */
   name: string
   /** Where the instrument header starts. */
   headerOffset: number
@@ -50,7 +50,7 @@ export interface Envelope {
 }
 
 export interface Loop {
-  /** 0–3 seen. See CLAUDE.md for what they probably mean. */
+  /** 0 = no loop. 1, 2 and 3 are seen on looping sounds; how they differ isn't known. */
   mode: number
   /** First frame of the loop. */
   start: number

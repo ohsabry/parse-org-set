@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import { parseSet, pickMelodicSample, planSimpleExtraction, type Sample } from '../src/index'
+import { parseSet, planSimpleExtraction, type Sample } from '../src/index'
+import { pickMelodicSample } from '../src/simple'
 import { buildSet, type FakeSample } from './helpers/build-set'
 
 function root(rootNote: number): Sample {

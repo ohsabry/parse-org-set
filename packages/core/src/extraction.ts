@@ -2,9 +2,15 @@ import { toAscii } from './ascii'
 import { noteLabel } from './notes'
 import type { Loop, Sample, SetFile } from './types'
 
+/** Every file to write, plus the index.json contents. */
+export interface ExtractionPlan {
+  files: PlannedFile[]
+  index: ExtractionIndex
+}
+
 /** One WAV file to write: where it goes (relative to the output folder) and what's in it. */
 export interface PlannedFile {
-  /** For example "02_❌الناي/001_C2_nay.wav". */
+  /** For example "02_Oud/001_C2_oud_C2.wav". */
   path: string
   sample: Sample
 }
@@ -40,13 +46,23 @@ export interface IndexSample {
   poolId?: number
 }
 
+/** `ascii: true` makes every folder and file name plain ASCII (Arabic in the Arabic chat alphabet). */
+export interface NameOptions {
+  ascii?: boolean
+}
+
 // Characters that macOS, Linux or Windows don't allow in file names.
 const UNSAFE = new Set(['/', '\\', ':', '*', '?', '"', '<', '>', '|'])
+
+// File systems allow 255 bytes per file or folder name. Names are kept well
+// under that, leaving room for the number prefix, the note and ".wav".
+const MAX_NAME_BYTES = 120
 
 /**
  * Turns any text into a safe file or folder name: drops unsafe and control
  * characters, turns runs of spaces into one underscore, trims spaces and
- * dots from the ends. Returns "unnamed" if nothing is left.
+ * dots from the ends, and cuts it to 120 bytes. Returns "unnamed" if nothing
+ * is left.
  */
 export function safeName(text: string): string {
   let name = ''
@@ -81,10 +97,6 @@ export function safeName(text: string): string {
   return name === '' ? 'unnamed' : name
 }
 
-// File systems allow 255 bytes per file or folder name. Names are kept well
-// under that, leaving room for the number prefix, the note and ".wav".
-const MAX_NAME_BYTES = 120
-
 /** Cuts `text` to at most `limit` bytes of UTF-8, never splitting a character. */
 function shorten(text: string, limit: number): string {
   const encoder = new TextEncoder()
@@ -99,6 +111,30 @@ function shorten(text: string, limit: number): string {
     bytes += size
   }
   return out
+}
+
+/** A safe file or folder name for `text`, in ASCII if asked. */
+export function nameFor(text: string, options: NameOptions): string {
+  return safeName(options.ascii === true ? toAscii(text) : text)
+}
+
+/** "001_C2_oud_C2.wav": a number padded to `digits`, the root note and the sample's name. */
+export function sampleFileName(
+  number: number,
+  digits: number,
+  sample: Sample,
+  options: NameOptions,
+): string {
+  return `${pad(number, digits)}_${noteLabel(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
+}
+
+/** The first instrument's header is named "-" (or "Constant" in 1.4.9); we call it Shots. */
+export function instrumentLabel(position: number, name: string): string {
+  return position === 0 ? 'Shots' : name
+}
+
+export function pad(n: number, digits: number): string {
+  return String(n).padStart(digits, '0')
 }
 
 /** "سيت الأصوات2023.Set" → "سيت_الأصوات2023_samples". */
@@ -151,32 +187,11 @@ function planSamples(
   const digits = Math.max(3, String(samples.length).length)
   const entries: IndexSample[] = []
   for (const [j, sample] of samples.entries()) {
-    const file = `${pad(j + 1, digits)}_${noteLabel(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
+    const file = sampleFileName(j + 1, digits, sample, options)
     files.push({ path: `${folder}/${file}`, sample })
     entries.push(indexEntry(file, sample))
   }
   return entries
-}
-
-/** Every file to write, plus the index.json contents. */
-export interface ExtractionPlan {
-  files: PlannedFile[]
-  index: ExtractionIndex
-}
-
-/** `ascii: true` makes every folder and file name plain ASCII (Arabic in the Arabic chat alphabet). */
-export interface NameOptions {
-  ascii?: boolean
-}
-
-/** A safe file or folder name for `text`, in ASCII if asked. */
-export function nameFor(text: string, options: NameOptions): string {
-  return safeName(options.ascii === true ? toAscii(text) : text)
-}
-
-/** The first group's header is named "-"; we call it Shots. */
-export function instrumentLabel(position: number, name: string): string {
-  return position === 0 ? 'Shots' : name
 }
 
 /** A sample's entry in index.json. */
@@ -193,8 +208,4 @@ export function indexEntry(file: string, sample: Sample): IndexSample {
     loop: sample.loop,
     ...(sample.poolId === undefined ? {} : { poolId: sample.poolId }),
   }
-}
-
-export function pad(n: number, digits: number): string {
-  return String(n).padStart(digits, '0')
 }

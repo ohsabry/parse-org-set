@@ -3,6 +3,7 @@ import {
   instrumentLabel,
   nameFor,
   pad,
+  sampleFileName,
   type ExtractionIndex,
   type ExtractionPlan,
   type IndexInstrument,
@@ -22,7 +23,8 @@ const MIDDLE_C = 60
  * - audio phrase instruments: left out (by ear, their chops aren't useful on their own)
  * Instruments without a decoded type are treated as melodic.
  * `bytes` are the .Set file's bytes, used to skip drum sounds whose audio is
- * an exact copy of one already exported.
+ * an exact copy of one already exported, even by an earlier kit: a sound
+ * shared by two kits appears only in the first.
  */
 export function planSimpleExtraction(
   sourceName: string,
@@ -56,7 +58,7 @@ export function planSimpleExtraction(
         }
         exported.push(sample)
         n++
-        const file = `${pad(n, 3)}_${noteLabel(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
+        const file = sampleFileName(n, 3, sample, options)
         files.push({ path: `${folder}/${file}`, sample })
         entry.samples.push(indexEntry(file, sample))
       }

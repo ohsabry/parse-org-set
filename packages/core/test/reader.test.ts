@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import { ByteReader, OutOfBoundsError } from '../src/index'
+import { OutOfBoundsError } from '../src/errors/out-of-bounds-error'
+import { ByteReader } from '../src/reader'
 
 const from = (...values: number[]): Uint8Array => new Uint8Array(values)
 

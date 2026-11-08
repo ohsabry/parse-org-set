@@ -100,7 +100,13 @@ describe('parse-org-set extract', () => {
           {
             name: '-',
             samples: [
-              { name: 'قانون', rootNote: 60, rate: 48000, channels: 1, audio: Int16Array.from([1]) },
+              {
+                name: 'قانون',
+                rootNote: 60,
+                rate: 48000,
+                channels: 1,
+                audio: Int16Array.from([1]),
+              },
             ],
           },
         ],

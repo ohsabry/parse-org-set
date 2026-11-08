@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
 
 import { readFileHeader } from '../src/file-header'
-import { ByteReader, parseSet, planExtraction, type Sample, type SetFile } from '../src/index'
+import { parseSet, planExtraction, type Sample, type SetFile } from '../src/index'
+import { ByteReader } from '../src/reader'
 
 // Optional smoke test against a real .Set file (1.2.x to 1.4.x), which can't be committed:
 //

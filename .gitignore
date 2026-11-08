@@ -1,4 +1,4 @@
-# Never commit .Set packs or extracted audio (see CLAUDE.md)
+# Never commit .Set packs or extracted audio
 *.Set
 *.set
 *.SET

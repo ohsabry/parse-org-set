@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
 import { readFileHeader } from '../src/file-header'
-import { ByteReader, SetFormatError } from '../src/index'
+import { SetFormatError } from '../src/index'
+import { ByteReader } from '../src/reader'
 import { FILE_STARTS } from './fixtures/real-bytes'
 import { buildSet, type FakeSample } from './helpers/build-set'
 

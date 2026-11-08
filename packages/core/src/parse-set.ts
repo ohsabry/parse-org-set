@@ -4,6 +4,7 @@ import { readInstrumentSettings } from './instrument-settings'
 import { ByteReader } from './reader'
 import { SAMPLE_HEADER_LENGTH, readSample, sampleProblem } from './sample'
 import type { Instrument, PoolEntry, Sample, SetFile } from './types'
+import { startsWith } from './utils'
 
 /** One header and its samples, before layers are grouped under their instrument. */
 interface Group {
@@ -84,11 +85,22 @@ function findNextSample(
   return undefined
 }
 
+// An instrument header starts with a uint32 length, then that many bytes of
+// text. Real names are well under this; anything longer isn't a header.
+const LENGTH_FIELD = 4
+const MAX_TEXT_LENGTH = 256
+
 /**
  * The start of an instrument header hidden between the header at
  * `headerOffset` and `before`, which means the header at `headerOffset` has
- * no samples. A hidden header is a uint32 length and a name ending with the
- * version (`ending`), right after a sample count of 0.
+ * no samples. Right after its own text, the empty header ends with a sample
+ * count of 0, so the bytes look like:
+ *
+ *   … [count = 0] [uint32 length] [name + ending] …
+ *                 ^ returned       ^ start         ^ end
+ *
+ * where `ending` is the version text ("\r1.3.1\r") and the name is at least
+ * one byte.
  */
 function hiddenHeader(
   reader: ByteReader,
@@ -97,33 +109,30 @@ function hiddenHeader(
   ending: Uint8Array,
 ): number | undefined {
   reader.seek(headerOffset)
-  const searchFrom = headerOffset + 4 + reader.u32()
-  for (let end = searchFrom + ending.length + 6; end <= before; end++) {
-    if (!endsWith(reader, end, ending)) {
+  const ownTextEnd = headerOffset + LENGTH_FIELD + reader.u32()
+  // The earliest the hidden text can start: after the count byte and length.
+  const firstStart = ownTextEnd + 1 + LENGTH_FIELD
+  const shortestText = 1 + ending.length
+
+  for (let end = firstStart + shortestText; end <= before; end++) {
+    reader.seek(end - ending.length)
+    if (!startsWith(reader.bytes(ending.length), ending)) {
       continue
     }
     // Look back for a uint32 length whose text ends exactly here.
-    const earliest = Math.max(searchFrom + 5, end - 256)
-    for (let start = end - ending.length - 1; start >= earliest; start--) {
-      reader.seek(start - 4)
-      if (reader.u32() === end - start) {
-        reader.seek(start - 5)
-        return reader.u8() === 0 ? start - 4 : undefined
+    const earliest = Math.max(firstStart, end - MAX_TEXT_LENGTH)
+    for (let start = end - shortestText; start >= earliest; start--) {
+      reader.seek(start - LENGTH_FIELD)
+      if (reader.u32() !== end - start) {
+        continue
+      }
+      reader.seek(start - LENGTH_FIELD - 1)
+      if (reader.u8() === 0) {
+        return start - LENGTH_FIELD
       }
     }
   }
   return undefined
-}
-
-function endsWith(reader: ByteReader, end: number, ending: Uint8Array): boolean {
-  reader.seek(end - ending.length)
-  const bytes = reader.bytes(ending.length)
-  for (let i = 0; i < ending.length; i++) {
-    if (bytes[i] !== ending[i]) {
-      return false
-    }
-  }
-  return true
 }
 
 /**
@@ -139,7 +148,11 @@ function namedHeaderAt(reader: ByteReader, offset: number): string | undefined {
   }
   reader.seek(offset)
   const textLength = reader.u32()
-  if (textLength === 0 || textLength > 256 || reader.offset + textLength > reader.length) {
+  if (
+    textLength === 0 ||
+    textLength > MAX_TEXT_LENGTH ||
+    reader.offset + textLength > reader.length
+  ) {
     return undefined
   }
   const [name, ...rest] = reader.utf8(textLength).split('\r')

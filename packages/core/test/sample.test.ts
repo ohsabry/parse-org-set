@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import { ByteReader, SetFormatError } from '../src/index'
+import { SetFormatError } from '../src/index'
+import { ByteReader } from '../src/reader'
 import { readSample, sampleProblem } from '../src/sample'
 import { SAMPLE_HEADERS } from './fixtures/real-bytes'
 

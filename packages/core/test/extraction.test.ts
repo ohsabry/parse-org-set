@@ -1,12 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import {
-  defaultOutputFolder,
-  planExtraction,
-  safeName,
-  type Sample,
-  type SetFile,
-} from '../src/index'
+import { safeName } from '../src/extraction'
+import { defaultOutputFolder, planExtraction, type Sample, type SetFile } from '../src/index'
 
 describe('safeName', () => {
   test('spaces become single underscores, and the ends are trimmed', () => {

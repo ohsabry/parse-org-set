@@ -1,5 +1,7 @@
 import { describeSpacing, noteLabel, type Sample, type SetFile } from '@parse-org-set/core'
 
+import { count } from './utils'
+
 /** What `inspect` prints: a header line, then one row per instrument. */
 export function formatSummary(fileName: string, set: SetFile): string {
   const table: string[][] = [['#', 'Samples', 'Notes', 'Spacing', 'Duration', 'Instrument']]
@@ -105,8 +107,4 @@ function noteRange(roots: number[]): string {
   const low = noteLabel(Math.min(...roots))
   const high = noteLabel(Math.max(...roots))
   return low === high ? low : `${low}–${high}`
-}
-
-function count(n: number, noun: string): string {
-  return `${n.toLocaleString('en-US')} ${noun}${n === 1 ? '' : 's'}`
 }

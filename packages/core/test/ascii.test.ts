@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { toAscii } from '../src/index'
+import { toAscii } from '../src/ascii'
 
 describe('toAscii', () => {
   test('Arabic names in the Arabic chat alphabet', () => {
