@@ -66,7 +66,7 @@ describe('parseSet', () => {
 })
 
 describe('instrument settings', () => {
-  test('a header with only a name has no kind or envelope', () => {
+  test('a header with only a name is a layer of the instrument before it', () => {
     const set = parseSet(
       buildSet({
         instruments: [
@@ -75,9 +75,9 @@ describe('instrument settings', () => {
         ],
       }),
     )
-    expect(set.instruments[1]?.name).toBe('Sax Breath')
-    expect(set.instruments[1]?.kind).toBeUndefined()
-    expect(set.instruments[1]?.envelope).toBeUndefined()
+    expect(set.instruments).toHaveLength(1)
+    expect(set.instruments[0]?.layers.map((layer) => layer.name)).toEqual(['Sax Breath'])
+    expect(set.instruments[0]?.layers[0]?.samples[0]?.name).toBe('sax')
   })
 
   test('a header too short to hold the settings has no kind or envelope', () => {
@@ -94,6 +94,54 @@ describe('instrument settings', () => {
     )
     expect(set.instruments[0]?.kind).toBeUndefined()
     expect(set.instruments[0]?.envelope).toBeDefined()
+  })
+})
+
+describe('sample pools, layers and empty instruments', () => {
+  test('pooled and inline samples mix; pooled audio comes from the pool, shared where IDs match', () => {
+    const pooled = (
+      name: string,
+      rootNote: number,
+      values: number[],
+      poolId: number,
+    ): FakeSample => ({
+      ...mono(name, rootNote, 0),
+      audio: Int16Array.from(values),
+      poolId,
+    })
+    const bytes = buildSet({
+      version: '1.4.9',
+      instruments: [
+        {
+          name: '-',
+          samples: [pooled('a', 0, [11, 12], 3), mono('inline', 1, 2), pooled('c', 2, [11, 12], 3)],
+        },
+      ],
+    })
+    const set = parseSet(bytes)
+    const view = new DataView(bytes.buffer)
+    const [a, inline, c] = set.instruments[0]?.samples ?? []
+    expect(set.poolEntries).toBe(1)
+    expect([a?.poolId, inline?.poolId, c?.poolId]).toEqual([3, undefined, 3])
+    expect(view.getInt16(a?.audioOffset ?? 0, true)).toBe(11)
+    expect(c?.audioOffset).toBe(a?.audioOffset) // the same pool entry
+    // A pooled sample has no audio after its header, so the next one follows straight on.
+    expect(inline?.offset).toBe((a?.offset ?? 0) + 97)
+  })
+
+  test('an empty instrument does not swallow the one after it', () => {
+    const set = parseSet(
+      buildSet({
+        instruments: [
+          { name: '-', samples: [mono('click', 0, 4)] },
+          { name: 'Empty', samples: [] },
+          { name: 'Oud', samples: [mono('oud', 48, 4)] },
+        ],
+      }),
+    )
+    expect(set.instruments.map((i) => i.name)).toEqual(['-', 'Empty', 'Oud'])
+    expect(set.instruments[1]?.samples).toEqual([])
+    expect(set.instruments[2]?.samples[0]?.name).toBe('oud')
   })
 })
 
@@ -115,7 +163,7 @@ describe('parseSet on broken files', () => {
     const bytes = buildSet({ instruments: instruments.slice(0, 1) })
     bytes[shotsCountByte(bytes)] = 1
     // The second sample is then read as if it were an instrument header.
-    expect(() => parseSet(bytes)).toThrow('runs past its first sample')
+    expect(() => parseSet(bytes)).toThrow('runs past its end')
   })
 
   test('a file cut off in the middle of an instrument', () => {

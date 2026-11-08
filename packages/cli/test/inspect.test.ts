@@ -3,7 +3,6 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { FILE_STARTS } from '../../core/test/fixtures/real-bytes'
 import { buildSet } from '../../core/test/helpers/build-set'
 
 // Runs the real command in a separate process, the way a user would.
@@ -60,10 +59,21 @@ describe('parse-org-set inspect', () => {
     expect(stderr).toContain('Not a .Set file')
   })
 
-  test('a version that is not supported yet', () => {
-    const { code, stderr } = run('inspect', writeTemp('new.Set', FILE_STARTS.v149))
+  test('a version it has never seen', () => {
+    const set = buildSet({
+      version: '1.5.0',
+      instruments: [
+        {
+          name: '-',
+          samples: [
+            { name: 'a', rootNote: 0, rate: 48000, channels: 1, audio: Int16Array.from([1]) },
+          ],
+        },
+      ],
+    })
+    const { code, stderr } = run('inspect', writeTemp('new.Set', set))
     expect(code).toBe(1)
-    expect(stderr).toContain(`Version "1.4.9" isn't supported yet`)
+    expect(stderr).toContain(`Version "1.5.0" isn't supported`)
   })
 
   test('wrong arguments print the usage', () => {

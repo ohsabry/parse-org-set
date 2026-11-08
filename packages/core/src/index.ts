@@ -14,5 +14,14 @@ export {
 export { describeSpacing, noteName } from './notes'
 export { parseSet } from './parse-set'
 export { pickMelodicSample, planSimpleExtraction } from './simple'
-export type { Envelope, Instrument, InstrumentKind, Loop, Sample, SetFile } from './types'
+export type {
+  Envelope,
+  Instrument,
+  InstrumentKind,
+  Layer,
+  Loop,
+  PoolEntry,
+  Sample,
+  SetFile,
+} from './types'
 export { encodeWav, type WavAudio } from './wav'

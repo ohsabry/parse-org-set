@@ -12,6 +12,7 @@ function root(rootNote: number): Sample {
     channels: 1,
     frames: 1,
     loop: { mode: 0, start: 0, end: 0 },
+    poolId: undefined,
     audioOffset: 0,
     audioLength: 2,
   }

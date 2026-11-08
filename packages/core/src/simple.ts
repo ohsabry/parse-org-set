@@ -17,7 +17,8 @@ const MIDDLE_C = 60
 /**
  * A smaller export than planExtraction:
  * - melodic instruments: one sample each, in melodic/ (see pickMelodicSample)
- * - drum kits (including Shots): every distinct sound, in drums/<kit>/
+ * - drum kits (including Shots): every distinct sound, from all of the kit's
+ *   layers, in drums/<kit>/
  * - audio phrase instruments: left out (by ear, their chops aren't useful on their own)
  * Instruments without a decoded type are treated as melodic.
  * `bytes` are the .Set file's bytes, used to skip drum sounds whose audio is
@@ -43,9 +44,13 @@ export function planSimpleExtraction(
 
     if (instrument.kind === 'drum') {
       const folder = `drums/${label}`
-      const entry: IndexInstrument = { folder, name: instrument.name, samples: [] }
+      const entry: IndexInstrument = { folder, name: instrument.name, samples: [], layers: [] }
+      const sounds = [...instrument.samples]
+      for (const layer of instrument.layers) {
+        sounds.push(...layer.samples)
+      }
       let n = 0
-      for (const sample of instrument.samples) {
+      for (const sample of sounds) {
         if (exported.some((other) => sameAudio(bytes, sample, other))) {
           continue
         }
@@ -69,6 +74,7 @@ export function planSimpleExtraction(
       folder: 'melodic',
       name: instrument.name,
       samples: [indexEntry(file, sample)],
+      layers: [],
     })
   }
   return { files, index }

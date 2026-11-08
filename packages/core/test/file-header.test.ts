@@ -3,16 +3,80 @@ import { describe, expect, test } from 'bun:test'
 import { readFileHeader } from '../src/file-header'
 import { ByteReader, SetFormatError } from '../src/index'
 import { FILE_STARTS } from './fixtures/real-bytes'
+import { buildSet, type FakeSample } from './helpers/build-set'
 
-describe('readFileHeader on real file starts', () => {
-  test('reads the version of a 1.3.1 file', () => {
-    expect(readFileHeader(new ByteReader(FILE_STARTS.v131))).toBe('1.3.1')
+const tone = (name: string, rootNote: number, values: number[], poolId?: number): FakeSample => ({
+  name,
+  rootNote,
+  rate: 44100,
+  channels: 1,
+  audio: Int16Array.from(values),
+  ...(poolId === undefined ? {} : { poolId }),
+})
+
+describe('readFileHeader', () => {
+  test('a 1.3.1 file without a pool: instruments start at 485, as in real files', () => {
+    const bytes = buildSet({ instruments: [{ name: '-', samples: [tone('a', 0, [1])] }] })
+    const header = readFileHeader(new ByteReader(bytes))
+    expect(header.version).toBe('1.3.1')
+    expect(header.firstInstrumentOffset).toBe(485)
+    expect(header.instrumentCount).toBe(1)
+    expect(header.pool.size).toBe(0)
   })
 
-  test('accepts the capitalised 1.4.9 title, then rejects the version', () => {
-    // The error is about the version, so "Music Studio Music" passed the title check.
+  test('accepts 1.2.x and 1.4.x, whose version texts differ ("\\r1.2.8\\r", "\\r1.4.9")', () => {
+    for (const version of ['1.2.8', '1.3.0', '1.4.9']) {
+      const bytes = buildSet({
+        version,
+        instruments: [{ name: '-', samples: [tone('a', 0, [1])] }],
+      })
+      expect(readFileHeader(new ByteReader(bytes)).version).toBe(version)
+    }
+  })
+
+  test('reads the sample pool: each entry is where its audio is', () => {
+    const bytes = buildSet({
+      instruments: [
+        {
+          name: '-',
+          samples: [tone('a', 0, [7, 8], 4), tone('b', 1, [9], 10), tone('c', 2, [7, 8], 4)],
+        },
+      ],
+    })
+    const { pool, firstInstrumentOffset } = readFileHeader(new ByteReader(bytes))
+    expect([...pool.keys()]).toEqual([4, 10]) // samples a and c share entry 4
+    const entry = pool.get(4)
+    expect(entry?.length).toBe(4)
+    const view = new DataView(bytes.buffer)
+    expect(view.getInt16(entry?.offset ?? 0, true)).toBe(7)
+    // The pool sits inside the file header, so the instruments start later.
+    expect(firstInstrumentOffset).toBe(485 + 8 + 4 + 8 + 2)
+  })
+
+  test('rejects versions it has never seen', () => {
+    const bytes = buildSet({
+      version: '1.5.0',
+      instruments: [{ name: '-', samples: [tone('a', 0, [1])] }],
+    })
+    expect(() => readFileHeader(new ByteReader(bytes))).toThrow(
+      `Version "1.5.0" isn't supported (only 1.2.x to 1.4.x)`,
+    )
+  })
+
+  test('a file header without the closing copy of the version', () => {
+    const bytes = buildSet({ instruments: [{ name: '-', samples: [tone('a', 0, [1])] }] })
+    bytes[470] = 0x21 // inside the copy of "\r1.3.1\r" at 466
+    expect(() => readFileHeader(new ByteReader(bytes))).toThrow(
+      "Couldn't find where the instruments start",
+    )
+  })
+})
+
+describe('readFileHeader on real file starts', () => {
+  test('accepts the capitalised 1.4.9 title and version, then runs out of bytes', () => {
+    // Only 48 real bytes: title and version are fine, the rest of the header is missing.
     expect(() => readFileHeader(new ByteReader(FILE_STARTS.v149))).toThrow(
-      `Version "1.4.9" isn't supported yet (only 1.3.x)`,
+      'The file header is cut off',
     )
   })
 })

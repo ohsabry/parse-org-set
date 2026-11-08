@@ -1,22 +1,50 @@
 import { SetFormatError } from './errors/set-format-error'
 import type { ByteReader } from './reader'
+import type { PoolEntry } from './types'
 
 const TITLE = 'music studio music'
+// Versions seen in real files: 1.2.8, 1.3.0, 1.3.1 and 1.4.9.
+const SUPPORTED = /^1\.[234]\.\d+$/
+
+// After the version text come `ff ff` and 14 more bytes (not decoded), then a
+// text field: a uint32 character count and the characters. Before 1.4 each
+// character is one byte; from 1.4 on, two.
+const VERSION_TO_TEXT_FIELD = 16
+// From the end of that text field to the sample pool's entry count.
+const TEXT_FIELD_TO_POOL = 134
+// How far past the pool to look for the copy of the version text that ends the
+// file header. In real files it's a few hundred bytes.
+const MAX_SEARCH = 1 << 20
+
+export interface FileHeader {
+  /** For example '1.3.1'. */
+  version: string
+  /** Where the first instrument header starts. */
+  firstInstrumentOffset: number
+  /** The number of instruments the file header says follow. */
+  instrumentCount: number
+  /** The sample pool: shared audio, by entry ID. Empty if the file has none. */
+  pool: Map<number, PoolEntry>
+}
 
 /**
- * Reads the start of the file header and returns the version, for example
- * '1.3.1'. Throws SetFormatError if it isn't a .Set file or isn't version 1.3.x.
+ * Reads the file header: title, version, the sample pool (if any), and where
+ * the first instrument starts. Throws SetFormatError if it isn't a .Set file
+ * or uses a version we don't support.
  *
- * Layout: a 32-byte null-padded title, a uint32 length, then the version text
- * (for example "\r1.3.1\r").
+ * Layout (see the README's Layouts section):
+ *   0   title, 32 bytes ("Music Studio music", any case)
+ *   32  uint32 length, then the version text ("\r1.3.1\r" or "\r1.4.9")
+ *   then ff ff and 14 bytes, a text field, 134 bytes, the sample pool,
+ *   more settings, and finally the version text again, ff ff 00 00 and a
+ *   uint32 instrument count, right before the first instrument header.
  */
-export function readFileHeader(reader: ByteReader): string {
+export function readFileHeader(reader: ByteReader): FileHeader {
   if (reader.length < 36) {
     throw new SetFormatError(`Too short to be a .Set file (${reader.length} bytes)`, 0)
   }
   reader.seek(0)
   const title = reader.utf8(32)
-  // 1.3.x writes "music", 1.4.9 can write "Music".
   if (title.toLowerCase() !== TITLE) {
     throw new SetFormatError(`Not a .Set file: it starts with ${JSON.stringify(title)}`, 0)
   }
@@ -25,18 +53,141 @@ export function readFileHeader(reader: ByteReader): string {
   if (textLength > 64 || 36 + textLength > reader.length) {
     throw new SetFormatError(`Version text length ${textLength} doesn't make sense`, 32)
   }
-  // Split on "\r" and drop the empty pieces: "\r1.3.1\r" → "1.3.1".
-  const version = reader
-    .utf8(textLength)
-    .split('\r')
-    .filter((part) => part !== '')
-    .join('\r')
-
-  if (!/^1\.3\.\d+$/.test(version)) {
+  const version = cleanVersion(reader.bytes(textLength))
+  if (!SUPPORTED.test(version)) {
     throw new SetFormatError(
-      `Version ${JSON.stringify(version)} isn't supported yet (only 1.3.x)`,
+      `Version ${JSON.stringify(version)} isn't supported (only 1.2.x to 1.4.x)`,
       36,
     )
   }
+
+  // The text field: 1 byte per character before 1.4, 2 bytes from 1.4 on.
+  const fieldAt = 36 + textLength + VERSION_TO_TEXT_FIELD
+  if (fieldAt + 4 > reader.length) {
+    throw new SetFormatError('The file header is cut off', fieldAt)
+  }
+  reader.seek(fieldAt)
+  const characters = reader.u32()
+  const bytesPerCharacter = version.startsWith('1.4.') ? 2 : 1
+  const poolAt = reader.offset + characters * bytesPerCharacter + TEXT_FIELD_TO_POOL
+  if (characters > 4096 || poolAt + 4 > reader.length) {
+    throw new SetFormatError(`Text field length ${characters} doesn't make sense`, fieldAt)
+  }
+  reader.seek(poolAt)
+
+  const pool = readPool(reader)
+  const { firstInstrumentOffset, instrumentCount } = findInstruments(reader, textLength)
+  return { version, firstInstrumentOffset, instrumentCount, pool }
+}
+
+/** "\r1.3.1\r" → "1.3.1". */
+function cleanVersion(text: Uint8Array): string {
+  let version = ''
+  for (const byte of text) {
+    if (byte !== 0x0d) {
+      version += String.fromCharCode(byte)
+    }
+  }
   return version
+}
+
+/**
+ * The sample pool: a uint32 entry count, then for each entry a uint32 ID, a
+ * uint32 size in bytes and that many bytes of 16-bit PCM. Samples can point
+ * at an entry instead of carrying their own audio.
+ *
+ * The pool is only accepted if it checks out completely: IDs increasing,
+ * sizes even and inside the file, and the uint32 100 right after it (as in
+ * every real file). Some files hold other values at this spot (a 1.4.9 save
+ * of a converted set has 105 and 213 there), so anything else counts as no
+ * pool; samples that point into a missing pool are then reported as errors.
+ * Leaves the reader after the pool, or where it started if there's none.
+ */
+function readPool(reader: ByteReader): Map<number, PoolEntry> {
+  const countAt = reader.offset
+  const pool = tryReadPool(reader)
+  if (pool === undefined) {
+    reader.seek(countAt)
+    return new Map()
+  }
+  return pool
+}
+
+const AFTER_POOL = 100
+
+function tryReadPool(reader: ByteReader): Map<number, PoolEntry> | undefined {
+  const count = reader.u32()
+  const pool = new Map<number, PoolEntry>()
+  let previousId = -1
+  for (let i = 0; i < count; i++) {
+    if (reader.offset + 8 > reader.length) {
+      return undefined
+    }
+    const id = reader.u32()
+    const length = reader.u32()
+    const offset = reader.offset
+    if (id <= previousId || length === 0 || length % 2 !== 0 || offset + length > reader.length) {
+      return undefined
+    }
+    pool.set(id, { id, offset, length })
+    previousId = id
+    reader.skip(length)
+  }
+  if (reader.offset + 4 > reader.length) {
+    return undefined
+  }
+  const after = reader.offset
+  const marker = reader.u32()
+  reader.seek(after)
+  return marker === AFTER_POOL ? pool : undefined
+}
+
+/**
+ * The file header ends with the version text again (with its uint32 length),
+ * ff ff 00 00, and a uint32 instrument count. The first instrument header
+ * comes right after. Searches from the reader's position (just after the pool).
+ */
+function findInstruments(
+  reader: ByteReader,
+  textLength: number,
+): { firstInstrumentOffset: number; instrumentCount: number } {
+  const searchFrom = reader.offset
+  reader.seek(32)
+  const marker = new Uint8Array(4 + textLength + 4)
+  marker.set(reader.bytes(4 + textLength))
+  marker.set([0xff, 0xff, 0x00, 0x00], 4 + textLength)
+
+  const found = indexOf(reader, marker, searchFrom, searchFrom + MAX_SEARCH)
+  if (found === undefined || found + marker.length + 4 > reader.length) {
+    throw new SetFormatError("Couldn't find where the instruments start", searchFrom)
+  }
+  reader.seek(found + marker.length)
+  const instrumentCount = reader.u32()
+  return { firstInstrumentOffset: reader.offset, instrumentCount }
+}
+
+/** The first offset in [from, to] where `needle` occurs. */
+function indexOf(
+  reader: ByteReader,
+  needle: Uint8Array,
+  from: number,
+  to: number,
+): number | undefined {
+  const last = Math.min(to, reader.length - needle.length)
+  for (let offset = from; offset <= last; offset++) {
+    reader.seek(offset)
+    if (sameBytes(reader.bytes(needle.length), needle)) {
+      return offset
+    }
+  }
+  return undefined
+}
+
+function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
+  for (let i = 0; i < b.length; i++) {
+    if (a[i] !== b[i]) {
+      return false
+    }
+  }
+  return true
 }

@@ -13,23 +13,31 @@ export interface PlannedFile {
 export interface ExtractionIndex {
   source: string
   version: string
-  instruments: {
-    folder: string
-    /** Exactly as stored in the .Set. */
-    name: string
-    samples: {
-      file: string
-      /** Exactly as stored in the .Set, including any trailing spaces. */
-      name: string
-      rootNote: number
-      note: string
-      sampleRate: number
-      channels: 1 | 2
-      frames: number
-      seconds: number
-      loop: Loop
-    }[]
-  }[]
+  instruments: IndexInstrument[]
+}
+
+export interface IndexInstrument {
+  folder: string
+  /** Exactly as stored in the .Set. */
+  name: string
+  samples: IndexSample[]
+  /** Extra layers, each in its own subfolder of the instrument's folder. */
+  layers: { folder: string; name: string; samples: IndexSample[] }[]
+}
+
+export interface IndexSample {
+  file: string
+  /** Exactly as stored in the .Set, including any trailing spaces. */
+  name: string
+  rootNote: number
+  note: string
+  sampleRate: number
+  channels: 1 | 2
+  frames: number
+  seconds: number
+  loop: Loop
+  /** The sample pool entry the audio came from, if it was in the pool. */
+  poolId?: number
 }
 
 // Characters that macOS, Linux or Windows don't allow in file names.
@@ -69,8 +77,28 @@ export function safeName(text: string): string {
   while (end > start && name[end - 1] === '.') {
     end--
   }
-  name = name.slice(start, end)
+  name = shorten(name.slice(start, end), MAX_NAME_BYTES)
   return name === '' ? 'unnamed' : name
+}
+
+// File systems allow 255 bytes per file or folder name. Names are kept well
+// under that, leaving room for the number prefix, the note and ".wav".
+const MAX_NAME_BYTES = 120
+
+/** Cuts `text` to at most `limit` bytes of UTF-8, never splitting a character. */
+function shorten(text: string, limit: number): string {
+  const encoder = new TextEncoder()
+  let out = ''
+  let bytes = 0
+  for (const char of text) {
+    const size = encoder.encode(char).length
+    if (bytes + size > limit) {
+      break
+    }
+    out += char
+    bytes += size
+  }
+  return out
 }
 
 /** "سيت الأصوات2023.Set" → "سيت_الأصوات2023_samples". */
@@ -99,17 +127,35 @@ export function planExtraction(
 
   for (const [i, instrument] of set.instruments.entries()) {
     const folder = `${pad(i + 1, folderDigits)}_${nameFor(instrumentLabel(i, instrument.name), options)}`
-    const fileDigits = Math.max(3, String(instrument.samples.length).length)
-    const entry: IndexInstrument = { folder, name: instrument.name, samples: [] }
+    const entry: IndexInstrument = { folder, name: instrument.name, samples: [], layers: [] }
+    entry.samples = planSamples(folder, instrument.samples, files, options)
 
-    for (const [j, sample] of instrument.samples.entries()) {
-      const file = `${pad(j + 1, fileDigits)}_${noteName(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
-      files.push({ path: `${folder}/${file}`, sample })
-      entry.samples.push(indexEntry(file, sample))
+    // Each extra layer goes in its own subfolder: "30_Alto_Sax/01_Alto_Sax_p/…".
+    for (const [k, layer] of instrument.layers.entries()) {
+      const layerFolder = `${folder}/${pad(k + 1, 2)}_${nameFor(layer.name, options)}`
+      const samples = planSamples(layerFolder, layer.samples, files, options)
+      entry.layers.push({ folder: layerFolder, name: layer.name, samples })
     }
     index.instruments.push(entry)
   }
   return { files, index }
+}
+
+/** Plans "NNN_note_name.wav" files in `folder` and returns their index entries. */
+function planSamples(
+  folder: string,
+  samples: Sample[],
+  files: PlannedFile[],
+  options: NameOptions,
+): IndexSample[] {
+  const digits = Math.max(3, String(samples.length).length)
+  const entries: IndexSample[] = []
+  for (const [j, sample] of samples.entries()) {
+    const file = `${pad(j + 1, digits)}_${noteName(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
+    files.push({ path: `${folder}/${file}`, sample })
+    entries.push(indexEntry(file, sample))
+  }
+  return entries
 }
 
 /** Every file to write, plus the index.json contents. */
@@ -117,8 +163,6 @@ export interface ExtractionPlan {
   files: PlannedFile[]
   index: ExtractionIndex
 }
-
-export type IndexInstrument = ExtractionIndex['instruments'][number]
 
 /** `ascii: true` makes every folder and file name plain ASCII (Arabic in the Arabic chat alphabet). */
 export interface NameOptions {
@@ -136,7 +180,7 @@ export function instrumentLabel(position: number, name: string): string {
 }
 
 /** A sample's entry in index.json. */
-export function indexEntry(file: string, sample: Sample): IndexInstrument['samples'][number] {
+export function indexEntry(file: string, sample: Sample): IndexSample {
   return {
     file,
     name: sample.name,
@@ -147,6 +191,7 @@ export function indexEntry(file: string, sample: Sample): IndexInstrument['sampl
     frames: sample.frames,
     seconds: sample.frames / sample.sampleRate,
     loop: sample.loop,
+    ...(sample.poolId === undefined ? {} : { poolId: sample.poolId }),
   }
 }
 

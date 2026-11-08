@@ -32,6 +32,14 @@ describe('safeName', () => {
     expect(safeName('🎵♦️NAY ♦️🎵')).toBe('🎵♦️NAY_♦️🎵')
   })
 
+  test('long names are cut to 120 bytes, never in the middle of a character', () => {
+    // A real drum kit is named with a long list of program numbers.
+    const programs = '120,000,077 '.repeat(40)
+    expect(new TextEncoder().encode(safeName(programs)).length).toBeLessThanOrEqual(120)
+    const arabic = safeName('ع'.repeat(100)) // 2 bytes per letter
+    expect(arabic).toBe('ع'.repeat(60))
+  })
+
   test('nothing left means "unnamed"', () => {
     expect(safeName('')).toBe('unnamed')
     expect(safeName(' / ')).toBe('unnamed')
@@ -43,6 +51,7 @@ test('ascii mode: every path is plain ASCII', () => {
   const arabic: SetFile = {
     version: '1.3.1',
     trailerOffset: 0,
+    poolEntries: 0,
     instruments: [
       {
         name: '-',
@@ -50,6 +59,7 @@ test('ascii mode: every path is plain ASCII', () => {
         kind: 'drum',
         envelope: undefined,
         samples: [sample('قانون🔥', 60, 10)],
+        layers: [],
       },
       {
         name: '❌الناي',
@@ -57,6 +67,7 @@ test('ascii mode: every path is plain ASCII', () => {
         kind: 'melodic',
         envelope: undefined,
         samples: [sample('🌀', 62, 10)],
+        layers: [],
       },
     ],
   }
@@ -82,6 +93,7 @@ function sample(name: string, rootNote: number, frames: number): Sample {
     channels: 1,
     frames,
     loop: { mode: 0, start: 0, end: frames - 1 },
+    poolId: undefined,
     audioOffset: 0,
     audioLength: frames * 2,
   }
@@ -90,6 +102,7 @@ function sample(name: string, rootNote: number, frames: number): Sample {
 const set: SetFile = {
   version: '1.3.1',
   trailerOffset: 0,
+  poolEntries: 0,
   instruments: [
     {
       name: '-',
@@ -97,6 +110,7 @@ const set: SetFile = {
       kind: undefined,
       envelope: undefined,
       samples: [sample('Metronome Long', 0, 24000)],
+      layers: [],
     },
     {
       name: 'Organ (Stereo)',
@@ -105,6 +119,7 @@ const set: SetFile = {
       envelope: undefined,
       // Two samples with the same name and root note.
       samples: [sample('-', 60, 4800), sample('-', 60, 4800), sample('A#5   ', 82, 100)],
+      layers: [],
     },
   ],
 }
@@ -144,6 +159,7 @@ describe('planExtraction', () => {
         kind: undefined,
         envelope: undefined,
         samples: [sample('s', 60, 10)],
+        layers: [],
       })
     }
     const paths = planExtraction('x.Set', many).files.map((f) => f.path)

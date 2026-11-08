@@ -23,6 +23,7 @@ describe('readSample on real sample headers', () => {
       channels: 1,
       frames: 17800,
       loop: { mode: 0, start: 0, end: 17799 },
+      poolId: undefined,
       audioOffset: 97,
       audioLength: 35600,
     })
@@ -37,9 +38,28 @@ describe('readSample on real sample headers', () => {
     expect(sample.audioLength).toBe(459920)
   })
 
-  test('XP-F#2: loop points', () => {
-    const sample = readSample(new ByteReader(withAudio(SAMPLE_HEADERS.xpFSharp2, 89637 * 2)))
+  test('XP-F#2: a pooled sample, its audio in the pool entry R+41 − 1 names', () => {
+    // In the real file, R+41 is 2636 and the audio is pool entry 2635 (179,274 bytes).
+    const header = SAMPLE_HEADERS.xpFSharp2
+    const pool = new Map([[2635, { id: 2635, offset: 5000, length: 89637 * 2 }]])
+    const reader = new ByteReader(withAudio(header, 6000 + 89637 * 2))
+    const sample = readSample(reader, pool)
+    expect(sample.poolId).toBe(2635)
+    expect(sample.audioOffset).toBe(5000)
     expect(sample.loop).toEqual({ mode: 2, start: 69090, end: 89636 })
+    // The audio isn't after the header, so the next sample starts right after it.
+    expect(reader.offset).toBe(97)
+  })
+
+  test('a pooled sample whose pool entry is missing or the wrong size', () => {
+    const reader = new ByteReader(withAudio(SAMPLE_HEADERS.xpFSharp2, 0))
+    expect(sampleProblem(reader, 0)).toBe(
+      "its audio is in sample pool entry 2635, which doesn't exist",
+    )
+    const wrongSize = new Map([[2635, { id: 2635, offset: 0, length: 100 }]])
+    expect(sampleProblem(reader, 0, wrongSize)).toBe(
+      'sample pool entry 2635 holds 100 bytes, but 89637 frames need 179274',
+    )
   })
 
   test('a 152,174 Hz sample takes its rate from R+37, not the truncated R+33', () => {

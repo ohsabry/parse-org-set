@@ -1,5 +1,5 @@
 /**
- * Test helper: builds a small fake 1.3.x .Set file in memory, following the
+ * Test helper: builds a small fake .Set file in memory, following the
  * Layouts section of README.md. Anything marked GUESS isn't known from real
  * files; the builder fills it with something harmless (usually zeros).
  */
@@ -20,6 +20,11 @@ export interface FakeSample {
   audio: Int16Array
   /** Defaults to what real files store when a sound doesn't loop: mode 0 over the whole sound. */
   loop?: FakeLoop
+  /**
+   * Put the audio in the sample pool under this ID instead of after the
+   * header. Samples with the same ID share one pool entry.
+   */
+  poolId?: number
 }
 
 export interface FakeInstrument {
@@ -35,25 +40,28 @@ export interface FakeInstrument {
 }
 
 export interface FakeSet {
+  /** Default '1.3.1'. */
   version?: string
   /** The first one is the Shots group. */
   instruments: FakeInstrument[]
 }
 
-const FILE_HEADER_LENGTH = 485
 const SAMPLE_HEADER_LENGTH = 97
 const NAME_FIELD_LENGTH = 31
 const ROOT_NOTE_AREA_LENGTH = 65 // hypothesis
 const MAX_LISTED_ROOT_NOTES = 51
 // GUESS: real settings blocks aren't decoded and vary in size. 62 zero bytes
-// makes the first sample start at 630 when the name is '-', as in real files.
+// makes the first sample start at 630 in a 1.3.1 file, as in real files.
 const FAKE_SETTINGS_LENGTH = 62
+// GUESS: the undecoded file header settings after the pool. 265 bytes puts the
+// first instrument header at 485 in a 1.3.1 file without a pool, as in real files.
+const FAKE_HEADER_SETTINGS_LENGTH = 265
 
 const encoder = new TextEncoder()
 
 export function buildSet(set: FakeSet): Uint8Array {
   const version = set.version ?? '1.3.1'
-  const chunks = [fileHeader(version, set.instruments.length)]
+  const chunks = [fileHeader(version, set.instruments.length, pool(set.instruments))]
   for (const instrument of set.instruments) {
     chunks.push(instrumentHeader(instrument, version))
     for (const sample of instrument.samples) {
@@ -63,17 +71,57 @@ export function buildSet(set: FakeSet): Uint8Array {
   return concat(chunks)
 }
 
-function fileHeader(version: string, instrumentCount: number): Uint8Array {
-  const out = new Uint8Array(FILE_HEADER_LENGTH)
-  const view = new DataView(out.buffer)
-  out.set(encoder.encode('Music Studio music'), 0)
-  const text = encoder.encode(`\r${version}\r`)
-  view.setUint32(32, text.length, true)
-  out.set(text, 36)
-  out.set([0xff, 0xff], 36 + text.length)
-  // GUESS: the rest, up to byte 480, is left as zeros.
-  view.setUint32(481, instrumentCount, true) // hypothesis: instrument count
-  return out
+/** 1.4.x writes the version as "\r1.4.9"; older versions as "\r1.3.1\r". */
+function versionText(version: string): string {
+  return version.startsWith('1.4.') ? `\r${version}` : `\r${version}\r`
+}
+
+function fileHeader(version: string, instrumentCount: number, poolBytes: Uint8Array): Uint8Array {
+  const text = encoder.encode(versionText(version))
+  const versionRecord = new Uint8Array(4 + text.length)
+  new DataView(versionRecord.buffer).setUint32(0, text.length, true)
+  versionRecord.set(text, 4)
+
+  const title = new Uint8Array(32)
+  title.set(encoder.encode('Music Studio music'))
+  // ff ff, 14 bytes (GUESS: zeros), then an empty text field (count 0), then
+  // 134 bytes (GUESS: zeros) before the pool.
+  const beforePool = new Uint8Array(2 + 14 + 4 + 134)
+  beforePool.set([0xff, 0xff])
+  const settings = new Uint8Array(FAKE_HEADER_SETTINGS_LENGTH)
+  settings[0] = 100 // real files have the uint32 100 right after the pool
+  // The end of the file header: the version text again, ff ff 00 00, the instrument count.
+  const ending = new Uint8Array(4 + 4)
+  ending.set([0xff, 0xff, 0x00, 0x00])
+  new DataView(ending.buffer).setUint32(4, instrumentCount, true)
+
+  return concat([title, versionRecord, beforePool, poolBytes, settings, versionRecord, ending])
+}
+
+/** The sample pool: a count, then each entry's ID, size and audio, in ID order. */
+function pool(instruments: FakeInstrument[]): Uint8Array {
+  const entries = new Map<number, Int16Array>()
+  for (const instrument of instruments) {
+    for (const sample of instrument.samples) {
+      if (sample.poolId === undefined) {
+        continue
+      }
+      const existing = entries.get(sample.poolId)
+      if (existing !== undefined && existing.length !== sample.audio.length) {
+        throw new Error(
+          `Samples sharing pool entry ${sample.poolId} must have the same audio length`,
+        )
+      }
+      entries.set(sample.poolId, existing ?? sample.audio)
+    }
+  }
+  const ids = [...entries.keys()].sort((a, b) => a - b)
+  const chunks: Uint8Array[] = [uint32(ids.length)]
+  for (const id of ids) {
+    const audio = entries.get(id) ?? new Int16Array(0)
+    chunks.push(uint32(id), uint32(audio.length * 2), pcm(audio))
+  }
+  return concat(chunks)
 }
 
 function instrumentHeader(instrument: FakeInstrument, version: string): Uint8Array {
@@ -89,7 +137,7 @@ function instrumentHeader(instrument: FakeInstrument, version: string): Uint8Arr
     bare[bare.length - 1] = count
     return bare
   }
-  const text = encoder.encode(`${instrument.name}\r${version}\r`)
+  const text = encoder.encode(`${instrument.name}${versionText(version)}`)
   const settingsLength = instrument.settingsLength ?? FAKE_SETTINGS_LENGTH
   const out = new Uint8Array(4 + text.length + 5 + ROOT_NOTE_AREA_LENGTH + settingsLength + 1)
   new DataView(out.buffer).setUint32(0, text.length, true)
@@ -120,8 +168,9 @@ function sampleBytes(sample: FakeSample): Uint8Array {
     throw new Error(`Sample name is ${name.length} bytes; the field holds ${NAME_FIELD_LENGTH}`)
   }
   const loop = sample.loop ?? { mode: 0, start: 0, end: frames - 1 }
+  const pooled = sample.poolId !== undefined
 
-  const out = new Uint8Array(SAMPLE_HEADER_LENGTH + audio.length * 2)
+  const out = new Uint8Array(SAMPLE_HEADER_LENGTH)
   const view = new DataView(out.buffer)
   out[0] = sample.rootNote
   out[1] = 0x20
@@ -130,13 +179,27 @@ function sampleBytes(sample: FakeSample): Uint8Array {
   out[35] = 16 // bits per sample
   out[36] = channels
   view.setUint32(37, sample.rate, true) // full rate
+  // 0 = audio follows; N = audio is pool entry N − 1
+  view.setUint32(41, pooled ? (sample.poolId ?? 0) + 1 : 0, true)
   view.setUint32(45, frames, true)
   view.setUint32(53, 100, true) // GUESS: most common real value (probably volume %)
   view.setUint32(69, loop.mode, true)
   view.setUint32(73, loop.start, true)
   view.setUint32(77, loop.end, true)
+  return pooled ? out : concat([out, pcm(audio)])
+}
+
+function uint32(value: number): Uint8Array {
+  const out = new Uint8Array(4)
+  new DataView(out.buffer).setUint32(0, value, true)
+  return out
+}
+
+function pcm(audio: Int16Array): Uint8Array {
+  const out = new Uint8Array(audio.length * 2)
+  const view = new DataView(out.buffer)
   for (const [i, value] of audio.entries()) {
-    view.setInt16(SAMPLE_HEADER_LENGTH + i * 2, value, true)
+    view.setInt16(i * 2, value, true)
   }
   return out
 }

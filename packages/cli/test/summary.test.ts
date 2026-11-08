@@ -13,6 +13,7 @@ function sample(rootNote: number, frames: number, sampleRate: number): Sample {
     channels: 1,
     frames,
     loop: { mode: 0, start: 0, end: frames - 1 },
+    poolId: undefined,
     audioOffset: 0,
     audioLength: frames * 2,
   }
@@ -21,6 +22,7 @@ function sample(rootNote: number, frames: number, sampleRate: number): Sample {
 const set: SetFile = {
   version: '1.3.1',
   trailerOffset: 0,
+  poolEntries: 0,
   instruments: [
     // 0.5 s + 0.25 s at 48 kHz
     {
@@ -29,6 +31,7 @@ const set: SetFile = {
       kind: undefined,
       envelope: undefined,
       samples: [sample(0, 24000, 48000), sample(1, 12000, 48000)],
+      layers: [],
     },
     // 3 × 20 s at 44.1 kHz = 60 s
     {
@@ -37,6 +40,7 @@ const set: SetFile = {
       kind: undefined,
       envelope: undefined,
       samples: [sample(48, 882000, 44100), sample(52, 882000, 44100), sample(55, 882000, 44100)],
+      layers: [],
     },
   ],
 }

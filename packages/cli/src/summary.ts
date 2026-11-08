@@ -7,27 +7,39 @@ export function formatSummary(fileName: string, set: SetFile): string {
   let seconds = 0
 
   for (const [i, instrument] of set.instruments.entries()) {
+    // Notes and spacing describe the main samples; counts and durations
+    // include the instrument's extra layers too.
     const roots = instrument.samples.map((s) => s.rootNote)
-    const instrumentSeconds = totalSeconds(instrument.samples)
-    sampleCount += instrument.samples.length
+    const all = [...instrument.samples]
+    for (const layer of instrument.layers) {
+      all.push(...layer.samples)
+    }
+    const instrumentSeconds = totalSeconds(all)
+    sampleCount += all.length
     seconds += instrumentSeconds
+    // The first group's header is named "-" (or "Constant"); we call it Shots.
+    const name = i === 0 ? 'Shots' : instrument.name
+    const layers = instrument.layers.length
     table.push([
       String(i + 1),
-      String(instrument.samples.length),
+      String(all.length),
       noteRange(roots),
       describeSpacing(roots),
       formatDuration(instrumentSeconds),
-      // The first group's header is named "-"; we call it Shots.
-      i === 0 ? 'Shots' : instrument.name,
+      layers === 0 ? name : `${name} (+${count(layers, 'layer')})`,
     ])
   }
 
-  const header = [
+  const parts = [
     `Version ${set.version}`,
     count(set.instruments.length, 'instrument'),
     count(sampleCount, 'sample'),
     `${formatDuration(seconds)} of audio`,
-  ].join(' · ')
+  ]
+  if (set.poolEntries > 0) {
+    parts.push(`${count(set.poolEntries, 'shared sound')} in the sample pool`)
+  }
+  const header = parts.join(' · ')
   return [fileName, header, '', ...formatTable(table)].join('\n')
 }
 

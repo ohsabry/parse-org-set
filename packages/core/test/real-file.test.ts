@@ -1,8 +1,9 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
 
+import { readFileHeader } from '../src/file-header'
 import { ByteReader, parseSet, planExtraction, type Sample, type SetFile } from '../src/index'
 
-// Optional smoke test against a real 1.3.x .Set file, which can't be committed:
+// Optional smoke test against a real .Set file (1.2.x to 1.4.x), which can't be committed:
 //
 //   PARSE_ORG_SET_FILE=~/path/to/some.Set bun test
 //
@@ -27,13 +28,30 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
   beforeAll(async () => {
     const bytes = await Bun.file(path ?? '').bytes()
     const set = parseSet(bytes)
-    loaded = { bytes, set, samples: set.instruments.flatMap((i) => i.samples) }
+    const samples: Sample[] = []
+    for (const instrument of set.instruments) {
+      samples.push(...instrument.samples)
+      for (const layer of instrument.layers) {
+        samples.push(...layer.samples)
+      }
+    }
+    loaded = { bytes, set, samples }
   })
 
-  test('each instrument header lists the root notes of the samples that follow', () => {
-    // The parser takes each root note from its sample (R+0); the header keeps
-    // its own list of the first 51, 5 bytes after its text. They must agree.
+  test('the number of instruments matches the count in the file header', () => {
+    // The app writes the count; the parser finds instruments by walking the file.
     const { bytes, set } = real()
+    expect(set.instruments.length).toBe(readFileHeader(new ByteReader(bytes)).instrumentCount)
+  })
+
+  test('each instrument header lists the root notes of the samples that follow (1.3.x)', () => {
+    // The parser takes each root note from its sample (R+0); a 1.3.x header keeps
+    // its own list of the first 51, 5 bytes after its text. They must agree.
+    // 1.2.x headers have no list there, and in 1.4.x it doesn't always match.
+    const { bytes, set } = real()
+    if (!set.version.startsWith('1.3.')) {
+      return
+    }
     const reader = new ByteReader(bytes)
     for (const instrument of set.instruments) {
       reader.seek(instrument.headerOffset)
@@ -61,7 +79,9 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
     const notZeroBefore: string[] = []
     const firstSteps: number[] = []
     for (const s of samples) {
-      if (bytes.subarray(s.audioOffset - 16, s.audioOffset).some((b) => b !== 0)) {
+      // Pooled audio sits after a pool entry's ID and size, not after a header.
+      const afterHeader = s.poolId === undefined
+      if (afterHeader && bytes.subarray(s.audioOffset - 16, s.audioOffset).some((b) => b !== 0)) {
         notZeroBefore.push(s.name)
       }
       if (s.channels === 1 && s.frames >= 2) {
@@ -99,7 +119,7 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
     expect(notAudio).toEqual([])
   })
 
-  test('envelope times are within what the app allows (0 to 10,000 ms)', () => {
+  test('envelope times are within what the app allows (0 to 10,000 ms, sustain 0 to 100%)', () => {
     const outside: string[] = []
     for (const instrument of real().set.instruments) {
       const e = instrument.envelope
@@ -110,6 +130,9 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
         if (ms > 10000) {
           outside.push(`${instrument.name}: ${ms} ms`)
         }
+      }
+      if (e.sustainPercent !== undefined && e.sustainPercent > 100) {
+        outside.push(`${instrument.name}: sustain ${e.sustainPercent}%`)
       }
     }
     expect(outside).toEqual([])
