@@ -150,6 +150,37 @@ describe('planExtraction', () => {
     expect(metronome?.note).toBe('C-1')
   })
 
+  test('layers go in numbered subfolders of their instrument, and in the index', () => {
+    const layered: SetFile = {
+      ...set,
+      instruments: [
+        {
+          name: 'Alto Sax',
+          headerOffset: 0,
+          kind: 'melodic',
+          envelope: undefined,
+          samples: [sample('f', 60, 10)],
+          layers: [
+            { name: 'Alto Sax p', headerOffset: 0, samples: [sample('soft', 62, 10)] },
+            { name: 'Growl', headerOffset: 0, samples: [sample('g', 64, 10)] },
+          ],
+        },
+      ],
+    }
+    const plan = planExtraction('x.Set', layered)
+    const paths: string[] = []
+    for (const file of plan.files) {
+      paths.push(file.path)
+    }
+    // The first instrument is always called Shots.
+    expect(paths).toEqual([
+      '01_Shots/001_C4_f.wav',
+      '01_Shots/01_Alto_Sax_p/001_D4_soft.wav',
+      '01_Shots/02_Growl/001_E4_g.wav',
+    ])
+    expect(plan.index.instruments[0]?.layers.map((l) => l.name)).toEqual(['Alto Sax p', 'Growl'])
+  })
+
   test('numbers get wider when there are more than 99 instruments', () => {
     const many: SetFile = { ...set, instruments: [] }
     for (let i = 0; i < 120; i++) {

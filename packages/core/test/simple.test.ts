@@ -73,6 +73,20 @@ describe('planSimpleExtraction', () => {
     ])
   })
 
+  test("a drum kit's layers are exported with the kit", () => {
+    const kit = buildSet({
+      instruments: [
+        { name: '-', kind: 1, samples: [tone('kick', 36, [1])] },
+        { name: 'Breath', bare: true, samples: [tone('breath', 37, [2])] },
+      ],
+    })
+    const paths: string[] = []
+    for (const file of planSimpleExtraction('x.Set', kit, parseSet(kit)).files) {
+      paths.push(file.path)
+    }
+    expect(paths).toEqual(['drums/01_Shots/001_C2_kick.wav', 'drums/01_Shots/002_C#2_breath.wav'])
+  })
+
   test('the index keeps the original names', () => {
     expect(plan.index.instruments[1]).toMatchObject({ folder: 'melodic', name: 'Oud' })
     expect(plan.index.instruments[1]?.samples[0]?.name).toBe('c')

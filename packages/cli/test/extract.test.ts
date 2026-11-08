@@ -143,6 +143,53 @@ describe('parse-org-set extract', () => {
     expect(existsSync(join(dir, 'chosen/index.json'))).toBe(true)
   })
 
+  test('prints the folder with one trailing slash, however it was typed', () => {
+    const dir = workspace()
+    expect(run(dir, 'my pack.Set', 'chosen/').stdout).toBe(
+      'Wrote 2 WAV files in 2 folders to chosen/\n',
+    )
+  })
+
+  test('an empty instrument still gets its folder', () => {
+    const dir = workspace()
+    writeFileSync(
+      join(dir, 'empty.Set'),
+      buildSet({
+        instruments: [
+          {
+            name: '-',
+            samples: [
+              { name: 'a', rootNote: 0, rate: 48000, channels: 1, audio: Int16Array.from([1]) },
+            ],
+          },
+          { name: 'Nothing', samples: [] },
+          {
+            name: 'After',
+            samples: [
+              { name: 'b', rootNote: 1, rate: 48000, channels: 1, audio: Int16Array.from([2]) },
+            ],
+          },
+        ],
+      }),
+    )
+    expect(run(dir, 'empty.Set').code).toBe(0)
+    expect(readdirSync(join(dir, 'empty_samples')).sort()).toEqual([
+      '01_Shots',
+      '02_Nothing',
+      '03_After',
+      'index.json',
+    ])
+  })
+
+  test('a file system error is one line, not a crash', () => {
+    const dir = workspace()
+    // A folder can't be created inside a file.
+    const { code, stderr } = run(dir, 'my pack.Set', 'my pack.Set/inside')
+    expect(code).toBe(1)
+    expect(stderr.startsWith("Couldn't write my pack.Set/inside: ")).toBe(true)
+    expect(stderr.trim().split('\n')).toHaveLength(1)
+  })
+
   test('refuses a folder that is not empty, and leaves it alone', () => {
     const dir = workspace()
     mkdirSync(join(dir, 'busy'))

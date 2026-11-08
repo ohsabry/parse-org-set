@@ -14,13 +14,25 @@ const tone = (name: string, rootNote: number, values: number[], poolId?: number)
   ...(poolId === undefined ? {} : { poolId }),
 })
 
+/** The text of the instrument header at `offset`: a uint32 length, then the text. */
+function headerText(bytes: Uint8Array, offset: number): string {
+  const reader = new ByteReader(bytes)
+  reader.seek(offset)
+  return reader.utf8(reader.u32())
+}
+
 describe('readFileHeader', () => {
-  test('a 1.3.1 file without a pool: instruments start at 485, as in real files', () => {
-    const bytes = buildSet({ instruments: [{ name: '-', samples: [tone('a', 0, [1])] }] })
+  test('a file without a pool: finds the first instrument header after the version copy', () => {
+    const bytes = buildSet({
+      instruments: [
+        { name: '-', samples: [tone('a', 0, [1])] },
+        { name: 'Oud', samples: [tone('b', 48, [2])] },
+      ],
+    })
     const header = readFileHeader(new ByteReader(bytes))
     expect(header.version).toBe('1.3.1')
-    expect(header.firstInstrumentOffset).toBe(485)
-    expect(header.instrumentCount).toBe(1)
+    expect(headerText(bytes, header.firstInstrumentOffset)).toBe('-\r1.3.1\r')
+    expect(header.instrumentCount).toBe(2)
     expect(header.pool.size).toBe(0)
   })
 
@@ -49,8 +61,8 @@ describe('readFileHeader', () => {
     expect(entry?.length).toBe(4)
     const view = new DataView(bytes.buffer)
     expect(view.getInt16(entry?.offset ?? 0, true)).toBe(7)
-    // The pool sits inside the file header, so the instruments start later.
-    expect(firstInstrumentOffset).toBe(485 + 8 + 4 + 8 + 2)
+    // The pool sits inside the file header; the instruments still start right after it.
+    expect(headerText(bytes, firstInstrumentOffset)).toBe('-\r1.3.1\r')
   })
 
   test('rejects versions it has never seen', () => {

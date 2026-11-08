@@ -1,4 +1,4 @@
-import { describeSpacing, noteName, type Sample, type SetFile } from '@parse-org-set/core'
+import { describeSpacing, noteLabel, type Sample, type SetFile } from '@parse-org-set/core'
 
 /** What `inspect` prints: a header line, then one row per instrument. */
 export function formatSummary(fileName: string, set: SetFile): string {
@@ -102,8 +102,8 @@ function noteRange(roots: number[]): string {
   if (roots.length === 0) {
     return '-'
   }
-  const low = noteName(Math.min(...roots))
-  const high = noteName(Math.max(...roots))
+  const low = noteLabel(Math.min(...roots))
+  const high = noteLabel(Math.max(...roots))
   return low === high ? low : `${low}–${high}`
 }
 

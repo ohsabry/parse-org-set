@@ -50,12 +50,14 @@ const ARABIC: Record<string, string> = {
 
 /**
  * Turns text into plain ASCII: ASCII characters are kept, Arabic letters
- * become the Arabic chat alphabet, Arabic and Persian digits become 0–9, and everything else
- * (emoji, symbols, vowel marks, "�") is dropped.
+ * become the Arabic chat alphabet, Arabic and Persian digits become 0–9, and
+ * everything else (emoji, symbols, vowel marks, "�") is dropped.
  */
 export function toAscii(text: string): string {
   let out = ''
-  for (const char of text) {
+  // NFKC turns Arabic "presentation forms" (pre-shaped letters such as ﻋ, and
+  // ligatures such as ﻻ) into the ordinary letters (ع, لا) the table knows.
+  for (const char of text.normalize('NFKC')) {
     const code = char.codePointAt(0) ?? 0
     if (code < 0x80) {
       out += char

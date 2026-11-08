@@ -28,6 +28,12 @@ describe('toAscii', () => {
     expect(toAscii('نااااي�')).toBe('naaaai')
   })
 
+  test('Arabic presentation forms become ordinary letters first', () => {
+    // ﻋ ﻮ ﺩ are the pre-shaped forms of ع و د; ﻻ is the lam-alef ligature.
+    expect(toAscii('\uFECB\uFEEE\uFEA9')).toBe('3od')
+    expect(toAscii('\uFEFB')).toBe('la')
+  })
+
   test('nothing but emoji leaves nothing', () => {
     expect(toAscii('🔥🔥')).toBe('')
   })

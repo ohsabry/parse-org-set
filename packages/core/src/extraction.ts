@@ -1,5 +1,5 @@
 import { toAscii } from './ascii'
-import { noteName } from './notes'
+import { noteLabel } from './notes'
 import type { Loop, Sample, SetFile } from './types'
 
 /** One WAV file to write: where it goes (relative to the output folder) and what's in it. */
@@ -151,7 +151,7 @@ function planSamples(
   const digits = Math.max(3, String(samples.length).length)
   const entries: IndexSample[] = []
   for (const [j, sample] of samples.entries()) {
-    const file = `${pad(j + 1, digits)}_${noteName(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
+    const file = `${pad(j + 1, digits)}_${noteLabel(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
     files.push({ path: `${folder}/${file}`, sample })
     entries.push(indexEntry(file, sample))
   }
@@ -185,7 +185,7 @@ export function indexEntry(file: string, sample: Sample): IndexSample {
     file,
     name: sample.name,
     rootNote: sample.rootNote,
-    note: noteName(sample.rootNote),
+    note: noteLabel(sample.rootNote),
     sampleRate: sample.sampleRate,
     channels: sample.channels,
     frames: sample.frames,

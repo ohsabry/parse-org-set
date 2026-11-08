@@ -11,7 +11,7 @@ export {
   type NameOptions,
   type PlannedFile,
 } from './extraction'
-export { describeSpacing, noteName } from './notes'
+export { describeSpacing, noteLabel, noteName } from './notes'
 export { parseSet } from './parse-set'
 export { pickMelodicSample, planSimpleExtraction } from './simple'
 export type {

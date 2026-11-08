@@ -13,6 +13,15 @@ export function noteName(midi: number): string {
 }
 
 /**
+ * A note name for file names and summaries. A sample's root note is one byte,
+ * so it can be 128–255 (no real file has one); those become "note200" instead
+ * of throwing.
+ */
+export function noteLabel(midi: number): string {
+  return Number.isInteger(midi) && midi >= 0 && midi <= 127 ? noteName(midi) : `note${midi}`
+}
+
+/**
  * How an instrument's root notes are spread across the keyboard, from the
  * steps between neighbouring notes: "every semitone" or "every 7" when all
  * steps are equal; "mostly every semitone (1–2)" when one step makes up more

@@ -9,7 +9,7 @@ import {
   type NameOptions,
   type PlannedFile,
 } from './extraction'
-import { noteName } from './notes'
+import { noteLabel } from './notes'
 import type { Sample, SetFile } from './types'
 
 const MIDDLE_C = 60
@@ -56,7 +56,7 @@ export function planSimpleExtraction(
         }
         exported.push(sample)
         n++
-        const file = `${pad(n, 3)}_${noteName(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
+        const file = `${pad(n, 3)}_${noteLabel(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
         files.push({ path: `${folder}/${file}`, sample })
         entry.samples.push(indexEntry(file, sample))
       }
@@ -68,7 +68,7 @@ export function planSimpleExtraction(
     if (sample === undefined) {
       continue
     }
-    const file = `${label}_${noteName(sample.rootNote)}.wav`
+    const file = `${label}_${noteLabel(sample.rootNote)}.wav`
     files.push({ path: `melodic/${file}`, sample })
     index.instruments.push({
       folder: 'melodic',

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { basename } from 'node:path'
 import {
   SetFormatError,
   defaultOutputFolder,
@@ -60,13 +61,21 @@ async function main(args: string[]): Promise<number> {
     : planExtraction(fileName, set, { ascii })
   try {
     const written = writeExtraction(bytes, plan, target)
+    // Print the folder with one trailing slash, however it was typed.
+    const shown = `${target.replace(/[\\/]+$/, '')}/`
     console.log(
-      `Wrote ${count(written.files, 'WAV file')} in ${count(written.folders, 'folder')} to ${target}/`,
+      `Wrote ${count(written.files, 'WAV file')} in ${count(written.folders, 'folder')} to ${shown}`,
     )
     return 0
   } catch (error) {
     if (error instanceof ExtractError) {
       console.error(error.message)
+      return 1
+    }
+    // The file system said no (no permission, disk full, a bad path …): one
+    // line, not a stack trace. Anything else is a bug, so let it crash.
+    if (error instanceof Error && typeof (error as NodeJS.ErrnoException).code === 'string') {
+      console.error(`Couldn't write ${target}: ${error.message}`)
       return 1
     }
     throw error
@@ -97,7 +106,7 @@ async function loadSet(
   }
 
   try {
-    return { bytes, set: parseSet(bytes), fileName: path.split('/').pop() ?? path }
+    return { bytes, set: parseSet(bytes), fileName: basename(path) }
   } catch (error) {
     // Expected problems with the file get a one-line message; anything else
     // is a bug, so let it crash with a stack trace.

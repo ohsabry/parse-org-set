@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { describeSpacing, noteName } from '../src/index'
+import { describeSpacing, noteLabel, noteName } from '../src/index'
 
 describe('noteName', () => {
   test('follows the MIDI convention where 60 is middle C', () => {
@@ -16,6 +16,11 @@ describe('noteName', () => {
     expect(() => noteName(-1)).toThrow(RangeError)
     expect(() => noteName(1.5)).toThrow(RangeError)
   })
+})
+
+test('noteLabel names real MIDI notes and labels impossible ones instead of throwing', () => {
+  expect(noteLabel(60)).toBe('C4')
+  expect(noteLabel(200)).toBe('note200') // a root-note byte can hold up to 255
 })
 
 describe('describeSpacing', () => {

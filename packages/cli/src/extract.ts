@@ -24,7 +24,15 @@ export function writeExtraction(
     }
   }
 
+  // Every folder the index lists (an empty instrument still gets its folder),
+  // plus every folder a file goes in.
   const folders = new Set<string>()
+  for (const instrument of plan.index.instruments) {
+    folders.add(instrument.folder)
+    for (const layer of instrument.layers) {
+      folders.add(layer.folder)
+    }
+  }
   for (const { path } of plan.files) {
     folders.add(dirname(path))
   }

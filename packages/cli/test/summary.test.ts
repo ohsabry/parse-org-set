@@ -71,6 +71,29 @@ describe('formatSummary', () => {
   })
 })
 
+test('counts layers in the samples, labels them, and mentions the sample pool', () => {
+  const layered: SetFile = {
+    ...set,
+    poolEntries: 3,
+    instruments: [
+      {
+        name: '-',
+        headerOffset: 0,
+        kind: undefined,
+        envelope: undefined,
+        samples: [sample(0, 48000, 48000)],
+        layers: [{ name: 'Breath', headerOffset: 0, samples: [sample(1, 48000, 48000)] }],
+      },
+    ],
+  }
+  const lines = formatSummary('x.Set', layered).split('\n')
+  expect(lines[1]).toBe(
+    'Version 1.3.1 · 1 instrument · 2 samples · 2.0 s of audio · 3 shared sounds in the sample pool',
+  )
+  expect(lines[4]?.split(/\s{2,}/)[1]).toBe('2') // the main sample plus the layer's
+  expect(lines[4]?.endsWith('Shots (+1 layer)')).toBe(true)
+})
+
 describe('formatDuration', () => {
   test('picks a unit that suits the length', () => {
     expect(formatDuration(0.37)).toBe('0.4 s')
