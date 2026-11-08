@@ -1,4 +1,5 @@
 export { OutOfBoundsError } from './errors/out-of-bounds-error'
 export { ByteReader } from './reader'
 export { SetFormatError } from './errors/set-format-error'
+export { parseSet } from './parse-set'
 export type { Instrument, Loop, Sample, SetFile } from './types'

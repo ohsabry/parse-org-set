@@ -26,6 +26,8 @@ export interface FakeInstrument {
   /** Instrument header name. Real files use '-' for the first group (Shots). */
   name: string
   samples: FakeSample[]
+  /** Bytes of zero-filled stand-in settings. Real ones vary in size. Default 62. */
+  settingsLength?: number
 }
 
 export interface FakeSet {
@@ -76,7 +78,8 @@ function instrumentHeader(instrument: FakeInstrument, version: string): Uint8Arr
     throw new Error(`An instrument holds at most 255 samples (its count is one byte), got ${count}`)
   }
   const text = encoder.encode(`${instrument.name}\r${version}\r`)
-  const out = new Uint8Array(4 + text.length + 5 + ROOT_NOTE_AREA_LENGTH + FAKE_SETTINGS_LENGTH + 1)
+  const settingsLength = instrument.settingsLength ?? FAKE_SETTINGS_LENGTH
+  const out = new Uint8Array(4 + text.length + 5 + ROOT_NOTE_AREA_LENGTH + settingsLength + 1)
   new DataView(out.buffer).setUint32(0, text.length, true)
   out.set(text, 4)
   // Then an int32 (0 or −1 in real files) and the byte 01. Meaning unknown.
