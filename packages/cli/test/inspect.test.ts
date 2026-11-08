@@ -67,10 +67,11 @@ describe('parse-org-set inspect', () => {
   })
 
   test('wrong arguments print the usage', () => {
-    for (const args of [[], ['inspect'], ['extract', 'x.Set'], ['inspect', 'a.Set', 'b.Set']]) {
+    for (const args of [[], ['inspect'], ['convert', 'x.Set'], ['inspect', 'a.Set', 'b.Set']]) {
       const { code, stderr } = run(...args)
       expect(code).toBe(1)
-      expect(stderr).toContain('Usage: parse-org-set inspect <file.Set>')
+      expect(stderr).toContain('parse-org-set inspect <file.Set>')
+      expect(stderr).toContain('parse-org-set extract <file.Set> [folder]')
     }
   })
 })

@@ -25,6 +25,7 @@
     "tsc": "tsc -p packages/core && tsc -p packages/core/test && tsc -p packages/cli && tsc -p packages/cli/test",
     "test": "bun test",
     "verify": "bun run tsc && bun run lint && bun run fmt:check && bun test",
-    "inspect": "bun packages/cli/src/main.ts inspect"
+    "inspect": "bun packages/cli/src/main.ts inspect",
+    "extract": "bun packages/cli/src/main.ts extract"
   }
 }
