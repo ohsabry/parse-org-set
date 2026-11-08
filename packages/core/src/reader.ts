@@ -1,4 +1,4 @@
-import { OutOfBoundsError } from './out-of-bounds-error'
+import { OutOfBoundsError } from './errors/out-of-bounds-error'
 
 // Not `fatal`: invalid UTF-8 (for example a character cut in half by a
 // fixed-width field) becomes U+FFFD "�" instead of throwing.
