@@ -1,6 +1,6 @@
 /**
  * Real bytes from a .Set file saved by the ORG 24 app with its own default
- * content (no paid packs): record headers (metadata only, no audio) and the
+ * content (no paid packs): sample headers (metadata only, no audio) and the
  * start of the file header. Where a fixture is edited, the comment says how.
  */
 
@@ -9,8 +9,8 @@ export function hex(text: string): Uint8Array {
   return Uint8Array.from(pairs, (pair) => parseInt(pair, 16))
 }
 
-/** 97-byte record headers. */
-export const RECORD_HEADERS = {
+/** 97-byte sample headers. */
+export const SAMPLE_HEADERS = {
   // App default set. Mono, 48 kHz, 17,800 frames (0.37 s), no loop.
   metronomeLong: hex(
     '00204d6574726f6e6f6d65204c6f6e67000000000000000000000000000000000080bb100180bb00000000000088450000000000006400000000000000000000004f00000000000000000000008745000000000000000000000000000000000000',

@@ -1,22 +1,22 @@
 import { SetFormatError } from './errors/set-format-error'
 import type { ByteReader } from './reader'
-import type { SampleRecord } from './types'
+import type { Sample } from './types'
 
-/** Every record starts with a 97-byte header; the audio follows. */
-export const RECORD_HEADER_LENGTH = 97
+/** Every sample starts with a 97-byte header; the audio follows. */
+export const SAMPLE_HEADER_LENGTH = 97
 
 // Real files use 22,050 to 152,174 Hz. These limits are deliberately wide;
-// they only exist to reject bytes that clearly aren't a record.
+// they only exist to reject bytes that clearly aren't a sample.
 const MIN_SAMPLE_RATE = 4000
 const MAX_SAMPLE_RATE = 400_000
 
 /**
- * Says why the bytes at `offset` aren't a valid sample record, or returns
+ * Says why the bytes at `offset` aren't a valid sample, or returns
  * undefined if they are. Leaves the reader's position unchanged.
  */
-export function recordProblem(reader: ByteReader, offset: number): string | undefined {
-  if (offset < 0 || offset + RECORD_HEADER_LENGTH > reader.length) {
-    return 'not enough bytes left for a record header'
+export function sampleProblem(reader: ByteReader, offset: number): string | undefined {
+  if (offset < 0 || offset + SAMPLE_HEADER_LENGTH > reader.length) {
+    return 'not enough bytes left for a sample header'
   }
   const resumeAt = reader.offset
   try {
@@ -48,7 +48,7 @@ export function recordProblem(reader: ByteReader, offset: number): string | unde
     if (frames === 0) {
       return 'frame count is 0'
     }
-    if (offset + RECORD_HEADER_LENGTH + frames * channels * 2 > reader.length) {
+    if (offset + SAMPLE_HEADER_LENGTH + frames * channels * 2 > reader.length) {
       return `its audio (${frames} frames) runs past the end of the file`
     }
     return undefined
@@ -58,14 +58,14 @@ export function recordProblem(reader: ByteReader, offset: number): string | unde
 }
 
 /**
- * Reads the sample record at the reader's position and leaves the reader just
- * after its audio, where the next record or instrument header starts.
+ * Reads the sample at the reader's position and leaves the reader just
+ * after its audio, where the next sample or instrument header starts.
  */
-export function readRecord(reader: ByteReader): SampleRecord {
+export function readSample(reader: ByteReader): Sample {
   const offset = reader.offset
-  const problem = recordProblem(reader, offset)
+  const problem = sampleProblem(reader, offset)
   if (problem !== undefined) {
-    throw new SetFormatError(`No valid sample record at offset ${offset}: ${problem}`, offset)
+    throw new SetFormatError(`No valid sample at offset ${offset}: ${problem}`, offset)
   }
 
   const rootNote = reader.u8() // R+0
@@ -81,7 +81,7 @@ export function readRecord(reader: ByteReader): SampleRecord {
   reader.seek(offset + 69)
   const loop = { mode: reader.u32(), start: reader.u32(), end: reader.u32() }
 
-  const audioOffset = offset + RECORD_HEADER_LENGTH
+  const audioOffset = offset + SAMPLE_HEADER_LENGTH
   const audioLength = frames * channels * 2
   reader.seek(audioOffset + audioLength)
 

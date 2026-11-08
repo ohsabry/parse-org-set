@@ -17,10 +17,10 @@ not listed here aren't decoded yet.
 
 ### File structure
 
-    [file header][instrument header][records…][instrument header][records…] … [trailer]
+    [file header][instrument header][samples…][instrument header][samples…] … [trailer]
 
-Every instrument starts with an instrument header, followed by its sample records. We call the
-first instrument **Shots**. The trailer after the last record isn't decoded.
+Every instrument starts with an instrument header, followed by its samples. We call the
+first instrument **Shots**. The trailer after the last sample isn't decoded.
 
 ### File header (bytes 0–484)
 
@@ -39,14 +39,14 @@ The first instrument header starts at byte 485.
 | Text length    | uint32 | Length of the text that follows                                          |
 | Text           | UTF-8  | Name, then `\r` and the version that saved it (`-` = no name)            |
 | (unknown)      | 5 B    | An int32 that is 0 or −1, then one byte                                  |
-| Root-note list | bytes  | Root notes of the records that follow, one byte each, at most 51 entries |
+| Root-note list | bytes  | Root notes of the samples that follow, one byte each, at most 51 entries |
 | (unknown)      | varies | Not decoded                                                              |
-| Record count   | uint8  | Number of records that follow (the header's last byte)                   |
+| Sample count   | uint8  | Number of samples that follow (the header's last byte)                   |
 
-Instruments with more than 51 records list only the first 51 root notes. One real instrument
+Instruments with more than 51 samples list only the first 51 root notes. One real instrument
 header has only the name, 3 bytes and the count.
 
-### Sample record (97 bytes + audio)
+### Sample (97 bytes + audio)
 
 | Offset | Type   | Meaning                                                                  |
 | ------ | ------ | ------------------------------------------------------------------------ |
@@ -63,7 +63,7 @@ header has only the name, 3 bytes and the count.
 | R+77   | uint32 | Loop end frame (always at most frames − 1)                               |
 | R+97   | bytes  | Audio: 16-bit signed PCM, interleaved if stereo, `frames × channels × 2` |
 
-The next record (or instrument header) starts right after the audio, with no gap.
+The next sample (or instrument header) starts right after the audio, with no gap.
 
 ## How this is built
 

@@ -1,10 +1,10 @@
-/** A parsed .Set file. Audio isn't copied: records point into the original bytes. */
+/** A parsed .Set file. Audio isn't copied: samples point into the original bytes. */
 export interface SetFile {
   /** For example '1.3.1'. */
   version: string
   /** The first one is the Shots group. */
   instruments: Instrument[]
-  /** Where the undecoded trailer after the last record starts. */
+  /** Where the undecoded trailer after the last sample starts. */
   trailerOffset: number
 }
 
@@ -13,7 +13,7 @@ export interface Instrument {
   name: string
   /** Where the instrument header starts. */
   headerOffset: number
-  records: SampleRecord[]
+  samples: Sample[]
 }
 
 export interface Loop {
@@ -26,8 +26,8 @@ export interface Loop {
 }
 
 /** One recorded sound. */
-export interface SampleRecord {
-  /** Where the record starts (R). */
+export interface Sample {
+  /** Where the sample starts (R). */
   offset: number
   /** MIDI note number the sound was recorded at (60 = middle C). */
   rootNote: number
