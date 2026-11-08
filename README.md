@@ -2,13 +2,40 @@
 
 Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` files as WAV files. Works with sets saved by versions 1.2.x to 1.4.x of the app.
 
+## Usage
+
+Requires [Bun](https://bun.sh). From the repo folder, run `bun install` once, then:
+
+    bun run inspect "my set.Set"
+    bun run extract "my set.Set" [folder] [--simple] [--ascii]
+
+**`inspect`** prints a summary: the version, the number of instruments and samples, and one row
+per instrument with its sample count, note range, how its notes are spaced, its total length and
+its name.
+
+**`extract`** writes every sample as a WAV file, one folder per instrument (the first is
+`Shots`), with each instrument's extra layers in subfolders. `index.json` lists every file with
+its original name, root note, sample rate, length and loop points.
+
+- `folder` defaults to `<set name>_samples` (or `<set name>_simple` with `--simple`). It must be
+  new or empty, so nothing is ever overwritten.
+- `--simple` writes fewer files: one sample per melodic instrument in `melodic/` (a C close to
+  middle C where there is one), and every distinct drum sound in `drums/<kit>/`. Audio phrase
+  instruments are left out.
+- `--ascii` uses only ASCII in folder and file names; Arabic is written in the Arabic chat
+  alphabet (ع → 3, ح → 7). `index.json` always keeps the original names.
+
+File names include each sample's root note, with middle C (MIDI note 60) written `C4`.
+
 ## Development
 
-Requires [Bun](https://bun.sh).
+    bun run verify   # type check, lint, format check and tests
+    bun run fmt      # format everything (Prettier)
+    bun run lint:fix # fix what ESLint can
 
-    bun install
-    bun run fmt   # format everything (Prettier)
-    bun run lint  # check the code (ESLint)
+To also check the parser against a real set (which can't be committed):
+
+    PARSE_ORG_SET_FILE="path/to/some.Set" bun test
 
 ## Layouts
 
