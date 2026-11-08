@@ -1,0 +1,20 @@
+# Never commit .Set packs or extracted audio (see CLAUDE.md)
+*.Set
+*.set
+*.SET
+*.wav
+*.WAV
+out/
+output/
+export/
+
+# Local-only reference material
+reference/
+orgset_starter.zip
+
+node_modules/
+dist/
+.DS_Store
+
+# Project notes, kept local until the format is stable
+CLAUDE.md
