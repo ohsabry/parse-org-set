@@ -74,9 +74,13 @@ export function safeName(text: string): string {
 }
 
 /** "سيت الأصوات2023.Set" → "سيت_الأصوات2023_samples". */
-export function defaultOutputFolder(setFileName: string, options: NameOptions = {}): string {
+export function defaultOutputFolder(
+  setFileName: string,
+  options: NameOptions = {},
+  suffix = 'samples',
+): string {
   const withoutExtension = setFileName.replace(/\.set$/i, '')
-  return `${fileName(withoutExtension, options)}_samples`
+  return `${nameFor(withoutExtension, options)}_${suffix}`
 }
 
 /**
@@ -88,52 +92,64 @@ export function planExtraction(
   sourceName: string,
   set: SetFile,
   options: NameOptions = {},
-): { files: PlannedFile[]; index: ExtractionIndex } {
+): ExtractionPlan {
   const files: PlannedFile[] = []
   const index: ExtractionIndex = { source: sourceName, version: set.version, instruments: [] }
   const folderDigits = Math.max(2, String(set.instruments.length).length)
 
   for (const [i, instrument] of set.instruments.entries()) {
-    // The first group's header is named "-"; we call it Shots.
-    const label = i === 0 ? 'Shots' : instrument.name
-    const folder = `${pad(i + 1, folderDigits)}_${fileName(label, options)}`
+    const folder = `${pad(i + 1, folderDigits)}_${nameFor(instrumentLabel(i, instrument.name), options)}`
     const fileDigits = Math.max(3, String(instrument.samples.length).length)
-    const entry: ExtractionIndex['instruments'][number] = {
-      folder,
-      name: instrument.name,
-      samples: [],
-    }
+    const entry: IndexInstrument = { folder, name: instrument.name, samples: [] }
 
     for (const [j, sample] of instrument.samples.entries()) {
-      const note = noteName(sample.rootNote)
-      const file = `${pad(j + 1, fileDigits)}_${note}_${fileName(sample.name, options)}.wav`
+      const file = `${pad(j + 1, fileDigits)}_${noteName(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
       files.push({ path: `${folder}/${file}`, sample })
-      entry.samples.push({
-        file,
-        name: sample.name,
-        rootNote: sample.rootNote,
-        note,
-        sampleRate: sample.sampleRate,
-        channels: sample.channels,
-        frames: sample.frames,
-        seconds: sample.frames / sample.sampleRate,
-        loop: sample.loop,
-      })
+      entry.samples.push(indexEntry(file, sample))
     }
     index.instruments.push(entry)
   }
   return { files, index }
 }
 
+/** Every file to write, plus the index.json contents. */
+export interface ExtractionPlan {
+  files: PlannedFile[]
+  index: ExtractionIndex
+}
+
+export type IndexInstrument = ExtractionIndex['instruments'][number]
+
 /** `ascii: true` makes every folder and file name plain ASCII (Arabic in the Arabic chat alphabet). */
 export interface NameOptions {
   ascii?: boolean
 }
 
-function fileName(text: string, options: NameOptions): string {
+/** A safe file or folder name for `text`, in ASCII if asked. */
+export function nameFor(text: string, options: NameOptions): string {
   return safeName(options.ascii === true ? toAscii(text) : text)
 }
 
-function pad(n: number, digits: number): string {
+/** The first group's header is named "-"; we call it Shots. */
+export function instrumentLabel(position: number, name: string): string {
+  return position === 0 ? 'Shots' : name
+}
+
+/** A sample's entry in index.json. */
+export function indexEntry(file: string, sample: Sample): IndexInstrument['samples'][number] {
+  return {
+    file,
+    name: sample.name,
+    rootNote: sample.rootNote,
+    note: noteName(sample.rootNote),
+    sampleRate: sample.sampleRate,
+    channels: sample.channels,
+    frames: sample.frames,
+    seconds: sample.frames / sample.sampleRate,
+    loop: sample.loop,
+  }
+}
+
+export function pad(n: number, digits: number): string {
   return String(n).padStart(digits, '0')
 }

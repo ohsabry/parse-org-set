@@ -1,21 +1,19 @@
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
-import { encodeWav, planExtraction, type NameOptions, type SetFile } from '@parse-org-set/core'
+import { encodeWav, type ExtractionPlan } from '@parse-org-set/core'
 
 import { ExtractError } from './errors/extract-error'
 
 /**
- * Writes every sample of `set` as a WAV file under `folder`, one subfolder per
- * instrument, plus index.json. Refuses to write into a folder that already
- * has something in it, so it never overwrites anything.
+ * Writes every file in `plan` as a WAV under `folder` (creating subfolders as
+ * needed), plus index.json. Refuses to write into a folder that already has
+ * something in it, so it never overwrites anything.
  */
 export function writeExtraction(
   bytes: Uint8Array,
-  sourceName: string,
-  set: SetFile,
+  plan: ExtractionPlan,
   folder: string,
-  options: NameOptions = {},
 ): { files: number; folders: number } {
   if (existsSync(folder)) {
     if (!statSync(folder).isDirectory()) {
@@ -26,20 +24,23 @@ export function writeExtraction(
     }
   }
 
-  const { files, index } = planExtraction(sourceName, set, options)
+  const folders = new Set<string>()
+  for (const { path } of plan.files) {
+    folders.add(dirname(path))
+  }
   mkdirSync(folder, { recursive: true })
-  for (const instrument of index.instruments) {
-    mkdirSync(join(folder, instrument.folder))
+  for (const sub of folders) {
+    mkdirSync(join(folder, sub), { recursive: true })
   }
 
-  for (const { path, sample } of files) {
+  for (const { path, sample } of plan.files) {
     // A view onto the sample's audio inside the .Set bytes: nothing is copied
     // until encodeWav builds the WAV file.
     const audio = bytes.subarray(sample.audioOffset, sample.audioOffset + sample.audioLength)
     const wav = encodeWav({ sampleRate: sample.sampleRate, channels: sample.channels, audio })
     writeFileSync(join(folder, path), wav)
   }
-  writeFileSync(join(folder, 'index.json'), `${JSON.stringify(index, null, 2)}\n`)
+  writeFileSync(join(folder, 'index.json'), `${JSON.stringify(plan.index, null, 2)}\n`)
 
-  return { files: files.length, folders: index.instruments.length }
+  return { files: plan.files.length, folders: folders.size }
 }

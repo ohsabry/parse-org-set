@@ -108,8 +108,17 @@ describe('parse-org-set extract', () => {
     )
     const { code, stdout } = run(dir, 'عود.Set', '--ascii')
     expect(code).toBe(0)
-    expect(stdout).toBe('Wrote 1 WAV files in 1 folders to 3od_samples/\n')
+    expect(stdout).toBe('Wrote 1 WAV file in 1 folder to 3od_samples/\n')
     expect(readdirSync(join(dir, '3od_samples/01_Shots'))).toEqual(['001_C4_qanon.wav'])
+  })
+
+  test('--simple groups the export by instrument type', () => {
+    const dir = workspace()
+    const { code, stdout } = run(dir, 'my pack.Set', '--simple')
+    expect(code).toBe(0)
+    expect(stdout).toBe('Wrote 2 WAV files in 1 folder to my_pack_simple/\n')
+    // The test set's instruments have type byte 0, so both count as melodic.
+    expect(readdirSync(join(dir, 'my_pack_simple')).sort()).toEqual(['index.json', 'melodic'])
   })
 
   test('index.json keeps the original names', () => {

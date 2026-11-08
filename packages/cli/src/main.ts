@@ -1,5 +1,12 @@
 #!/usr/bin/env bun
-import { SetFormatError, defaultOutputFolder, parseSet, type SetFile } from '@parse-org-set/core'
+import {
+  SetFormatError,
+  defaultOutputFolder,
+  parseSet,
+  planExtraction,
+  planSimpleExtraction,
+  type SetFile,
+} from '@parse-org-set/core'
 
 import { ExtractError } from './errors/extract-error'
 import { writeExtraction } from './extract'
@@ -7,18 +14,21 @@ import { formatSummary } from './summary'
 
 const USAGE = `Usage:
   parse-org-set inspect <file.Set>
-  parse-org-set extract <file.Set> [folder] [--ascii]
+  parse-org-set extract <file.Set> [folder] [--ascii] [--simple]
 
-  folder   defaults to <set name>_samples
-  --ascii  use only ASCII in folder and file names (Arabic uses the Arabic chat alphabet)`
+  folder    defaults to <set name>_samples (or <set name>_simple)
+  --ascii   use only ASCII in folder and file names (Arabic uses the Arabic chat alphabet)
+  --simple  fewer files, grouped by type: one sample per melodic instrument and
+            every distinct drum sound; audio phrase instruments are left out`
 
 /** Runs the command line and returns the exit code: 0 on success, 1 on any error. */
 async function main(args: string[]): Promise<number> {
-  // --ascii can go anywhere; everything else is positional.
+  // Flags can go anywhere; everything else is positional.
   const ascii = args.includes('--ascii')
+  const simple = args.includes('--simple')
   const positional: string[] = []
   for (const arg of args) {
-    if (arg !== '--ascii') {
+    if (arg !== '--ascii' && arg !== '--simple') {
       positional.push(arg)
     }
   }
@@ -27,7 +37,7 @@ async function main(args: string[]): Promise<number> {
     path !== undefined &&
     extra.length === 0 &&
     !positional.some((arg) => arg.startsWith('--')) &&
-    ((command === 'inspect' && folder === undefined && !ascii) || command === 'extract')
+    ((command === 'inspect' && folder === undefined && !ascii && !simple) || command === 'extract')
   if (!valid) {
     console.error(USAGE)
     return 1
@@ -44,11 +54,14 @@ async function main(args: string[]): Promise<number> {
     return 0
   }
 
-  const target = folder ?? defaultOutputFolder(fileName, { ascii })
+  const target = folder ?? defaultOutputFolder(fileName, { ascii }, simple ? 'simple' : 'samples')
+  const plan = simple
+    ? planSimpleExtraction(fileName, bytes, set, { ascii })
+    : planExtraction(fileName, set, { ascii })
   try {
-    const written = writeExtraction(bytes, fileName, set, target, { ascii })
+    const written = writeExtraction(bytes, plan, target)
     console.log(
-      `Wrote ${written.files.toLocaleString('en-US')} WAV files in ${written.folders} folders to ${target}/`,
+      `Wrote ${count(written.files, 'WAV file')} in ${count(written.folders, 'folder')} to ${target}/`,
     )
     return 0
   } catch (error) {
@@ -94,6 +107,10 @@ async function loadSet(
     }
     throw error
   }
+}
+
+function count(n: number, noun: string): string {
+  return `${n.toLocaleString('en-US')} ${noun}${n === 1 ? '' : 's'}`
 }
 
 process.exitCode = await main(process.argv.slice(2))

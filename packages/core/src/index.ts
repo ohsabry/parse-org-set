@@ -7,10 +7,12 @@ export {
   planExtraction,
   safeName,
   type ExtractionIndex,
+  type ExtractionPlan,
   type NameOptions,
   type PlannedFile,
 } from './extraction'
 export { describeSpacing, noteName } from './notes'
 export { parseSet } from './parse-set'
+export { pickMelodicSample, planSimpleExtraction } from './simple'
 export type { Envelope, Instrument, InstrumentKind, Loop, Sample, SetFile } from './types'
 export { encodeWav, type WavAudio } from './wav'

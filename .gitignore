@@ -8,6 +8,7 @@ out/
 output/
 export/
 *_samples/
+*_simple/
 index.json
 
 # Local-only reference material
