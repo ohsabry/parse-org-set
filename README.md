@@ -4,8 +4,10 @@ Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` files as WAV files.
 
 ## Usage
 
-Requires [Bun](https://bun.sh). From the repo folder, run this once:
+Requires [Bun](https://bun.sh). Run this once:
 
+    git clone https://github.com/ohsabry/parse-org-set.git
+    cd parse-org-set
     bun install
     cd packages/cli && bun link
 
