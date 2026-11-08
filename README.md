@@ -1,6 +1,6 @@
 # parse-org-set
 
-Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` files as WAV files.
+Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` files as WAV files. Works with sets saved by versions 1.2.x to 1.4.x of the app.
 
 ## Development
 
@@ -12,67 +12,106 @@ Requires [Bun](https://bun.sh).
 
 ## Layouts
 
-What's confirmed about the `.Set` format, for version 1.3.x. All numbers are little-endian. Bytes
-not listed here aren't decoded yet.
+What's confirmed about the `.Set` format, from real files saved by versions 1.2.8, 1.3.0, 1.3.1
+and 1.4.9. All numbers are little-endian. Bytes not listed here aren't decoded yet.
 
 ### File structure
 
-    [file header][instrument header][samples…][instrument header][samples…] … [trailer]
+    [file header, including the sample pool][instrument][instrument] … [trailer]
 
-Every instrument starts with an instrument header, followed by its samples. We call the
-first instrument **Shots**. The trailer after the last sample isn't decoded.
+    instrument = [instrument header][samples…] then any [layer header][samples…]
 
-### File header (bytes 0–484)
+Every instrument starts with an instrument header, followed by its samples. An instrument can
+have extra **layers** (for example soft playing, growl, or a breath noise), each with a short
+header and its own samples. We call the first instrument **Shots**. The trailer after the last
+sample isn't decoded.
 
-| Offset | Type   | Meaning                                        |
-| ------ | ------ | ---------------------------------------------- |
-| 0      | 32 B   | Title, null-padded: `Music Studio music`       |
-| 32     | uint32 | Length of the version text                     |
-| 36     | text   | Version, for example `\r1.3.1\r`, then `ff ff` |
+### File header
 
-The first instrument header starts at byte 485.
+| Part             | Type   | Meaning                                                                       |
+| ---------------- | ------ | ----------------------------------------------------------------------------- |
+| Title            | 32 B   | Null-padded `Music Studio music` (some files write `Music`)                   |
+| Version length   | uint32 | Length of the version text                                                    |
+| Version          | text   | `\r1.3.1\r` in 1.2.x and 1.3.x; `\r1.4.9` (no trailing `\r`) in 1.4.x         |
+| (unknown)        | 16 B   | Starts with `ff ff`                                                           |
+| Text field       | uint32 | Number of characters that follow: 1 byte each before 1.4, 2 bytes each in 1.4 |
+| (unknown)        | 134 B  |                                                                               |
+| Sample pool      | varies | See below. Most files without one have a count of 0 here                      |
+| (unknown)        | varies | Starts with the uint32 100                                                    |
+| Version again    | text   | The version length and text again, then `ff ff 00 00`                         |
+| Instrument count | uint32 | Number of instruments (layers aren't counted)                                 |
+
+The first instrument header starts right after the instrument count.
+
+### Sample pool
+
+Some files keep audio in a shared pool, so several samples can use one recording.
+
+| Part        | Type   | Meaning                         |
+| ----------- | ------ | ------------------------------- |
+| Entry count | uint32 | Number of entries               |
+| Each entry: |        |                                 |
+| ID          | uint32 | Increasing from entry to entry  |
+| Size        | uint32 | In bytes                        |
+| Audio       | bytes  | 16-bit signed PCM, `size` bytes |
+
+A sample whose R+41 (below) is N uses the entry with ID N − 1.
 
 ### Instrument header (variable length)
 
-| Part           | Type   | Meaning                                                                  |
-| -------------- | ------ | ------------------------------------------------------------------------ |
-| Text length    | uint32 | Length of the text that follows                                          |
-| Text           | UTF-8  | Name, then `\r` and the version that saved it (`-` = no name)            |
-| (unknown)      | 5 B    | An int32 that is 0 or −1, then one byte                                  |
-| Root-note list | bytes  | Root notes of the samples that follow, one byte each, at most 51 entries |
-| (unknown)      | varies | Not decoded, except the instrument type (below)                          |
-| Attack         | uint8  | In 100 ms steps (0–100, up to 10 s)                                      |
-| Decay          | uint8  | In 100 ms steps                                                          |
-| Release        | uint8  | In 100 ms steps                                                          |
-| (unknown)      | uint8  |                                                                          |
-| Auto release   | uint8  | 0 = off, 1 = on                                                          |
-| (unknown)      | uint8  | 0                                                                        |
-| Sample count   | uint8  | Number of samples that follow (the header's last byte)                   |
+| Part           | Type   | Meaning                                                                         |
+| -------------- | ------ | ------------------------------------------------------------------------------- |
+| Text length    | uint32 | Length of the text that follows                                                 |
+| Text           | UTF-8  | Name, then the version that saved it, as in the file header (`-` = no name)     |
+| (unknown)      | 5 B    | An int32 that is 0 or −1, then one byte                                         |
+| Root-note list | bytes  | 1.3.x: root notes of the samples that follow, one byte each, at most 51 entries |
+| (unknown)      | varies | Not decoded, except the instrument type (below)                                 |
+| Envelope       | 6 B    | See below                                                                       |
+| Sample count   | uint8  | Number of samples that follow (the header's last byte); can be 0                |
 
 The byte 124 bytes after the end of the text is the **instrument type**: 0 = melodic,
 1 = drum kit, 2 = audio phrase. The first instrument (Shots) is a drum kit.
 
-Instruments with more than 51 samples list only the first 51 root notes. One real instrument
-header has only the name, 3 bytes and the count, and none of the settings above.
+The envelope's six bytes, with attack, decay and release in 100 ms steps (0–100, up to 10 s):
 
-### Sample (97 bytes + audio)
+| Version      | Bytes                                                                      |
+| ------------ | -------------------------------------------------------------------------- |
+| 1.2.x, 1.3.x | attack, decay, release, (unknown), auto release (0 off, 1 on), (unknown)   |
+| 1.4.x        | attack, decay, sustain (%), release, (unknown), auto release (0 off, 1 on) |
 
-| Offset | Type   | Meaning                                                                  |
-| ------ | ------ | ------------------------------------------------------------------------ |
-| R+0    | uint8  | Root note, as a MIDI note number (60 = middle C)                         |
-| R+1    | uint8  | Always `0x20`                                                            |
-| R+2    | 31 B   | Name, UTF-8, null-padded (can fill all 31 bytes)                         |
-| R+33   | uint16 | Sample rate, low 16 bits only                                            |
-| R+35   | uint8  | Bits per sample (always 16)                                              |
-| R+36   | uint8  | Channels (1 or 2)                                                        |
-| R+37   | uint32 | Sample rate, full value (can exceed 65,535)                              |
-| R+45   | uint32 | Frame count                                                              |
-| R+69   | uint32 | Loop mode (values 0–3 seen)                                              |
-| R+73   | uint32 | Loop start frame                                                         |
-| R+77   | uint32 | Loop end frame (always at most frames − 1)                               |
-| R+97   | bytes  | Audio: 16-bit signed PCM, interleaved if stereo, `frames × channels × 2` |
+In 1.3.x, instruments with more than 51 samples list only the first 51 root notes.
 
-The next sample (or instrument header) starts right after the audio, with no gap.
+### Layer header
+
+| Part         | Type   | Meaning                                                |
+| ------------ | ------ | ------------------------------------------------------ |
+| Text length  | uint32 | Length of the name                                     |
+| Name         | UTF-8  | Only a name, with no `\r` and version                  |
+| (unknown)    | varies | A few bytes                                            |
+| Sample count | uint8  | Number of samples that follow (the header's last byte) |
+
+A layer belongs to the instrument before it.
+
+### Sample (97 bytes, then the audio unless it's in the pool)
+
+| Offset | Type   | Meaning                                                                          |
+| ------ | ------ | -------------------------------------------------------------------------------- |
+| R+0    | uint8  | Root note, as a MIDI note number (60 = middle C)                                 |
+| R+1    | uint8  | Always `0x20`                                                                    |
+| R+2    | 31 B   | Name, UTF-8, null-padded (can fill all 31 bytes)                                 |
+| R+33   | uint16 | Sample rate, low 16 bits only                                                    |
+| R+35   | uint8  | Bits per sample (always 16)                                                      |
+| R+36   | uint8  | Channels (1 or 2)                                                                |
+| R+37   | uint32 | Sample rate, full value (can exceed 65,535)                                      |
+| R+41   | uint32 | Pool reference: 0 = the audio follows at R+97; N = the audio is pool entry N − 1 |
+| R+45   | uint32 | Frame count                                                                      |
+| R+69   | uint32 | Loop mode (values 0–3 seen)                                                      |
+| R+73   | uint32 | Loop start frame                                                                 |
+| R+77   | uint32 | Loop end frame (always at most frames − 1)                                       |
+| R+97   | bytes  | Audio: 16-bit signed PCM, interleaved if stereo, `frames × channels × 2` bytes   |
+
+The next sample (or header) starts right after the audio, or right after the 97-byte header if
+the audio is in the pool.
 
 ## How this is built
 
