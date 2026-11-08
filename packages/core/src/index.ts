@@ -1,2 +1,2 @@
-// Placeholder until Phase 1 adds the byte reader.
-export const name = '@parse-org-set/core'
+export { OutOfBoundsError } from './out-of-bounds-error'
+export { ByteReader } from './reader'
