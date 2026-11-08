@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "parse-org-set": "src/main.ts"
+  },
   "dependencies": {
     "@parse-org-set/core": "workspace:*"
   }

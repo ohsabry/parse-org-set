@@ -4,10 +4,19 @@ Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` files as WAV files.
 
 ## Usage
 
-Requires [Bun](https://bun.sh). From the repo folder, run `bun install` once, then:
+Requires [Bun](https://bun.sh). From the repo folder, run this once:
 
-    bun run inspect "my set.Set"
-    bun run extract "my set.Set" [folder] [--simple] [--ascii]
+    bun install
+    cd packages/cli && bun link
+
+That adds a `parse-org-set` command to `~/.bun/bin` (if your shell can't find it, add that folder
+to your `PATH`). Then, from any folder:
+
+    parse-org-set inspect "my set.Set"
+    parse-org-set extract "my set.Set" [folder] [--simple] [--ascii]
+
+Without linking, `bun run inspect …` and `bun run extract …` work from the repo folder, with
+paths relative to it.
 
 **`inspect`** prints a summary: the version, the number of instruments and samples, and one row
 per instrument with its sample count, note range, how its notes are spaced, its total length and
