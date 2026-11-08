@@ -17,6 +17,21 @@
         "typescript-eslint": "^8.72.1",
       },
     },
+    "packages/cli": {
+      "name": "@parse-org-set/cli",
+      "version": "0.0.0",
+      "dependencies": {
+        "@parse-org-set/core": "workspace:*",
+      },
+    },
+    "packages/core": {
+      "name": "@parse-org-set/core",
+      "version": "0.0.0",
+    },
+    "packages/web": {
+      "name": "@parse-org-set/web",
+      "version": "0.0.0",
+    },
   },
   "packages": {
     "@cacheable/memory": ["@cacheable/memory@2.2.0", "", { "dependencies": { "@cacheable/utils": "^2.5.0", "@keyv/bigmap": "^1.3.1", "hookified": "^1.15.1", "keyv": "^5.6.0" } }, "sha512-CTLKqLItRCEixEAewD3/j9DB3/o96gpTPD4eJ1v+DGOlxZRZncRQkGYqqnAGCscYd6RNeXfGeiuCphsPtqyIfQ=="],
@@ -52,6 +67,12 @@
     "@keyv/bigmap": ["@keyv/bigmap@1.3.1", "", { "dependencies": { "hashery": "^1.4.0", "hookified": "^1.15.0" }, "peerDependencies": { "keyv": "^5.6.0" } }, "sha512-WbzE9sdmQtKy8vrNPa9BRnwZh5UF4s1KTmSK0KUVLo3eff5BlQNNWDnFOouNpKfPKDnms9xynJjsMYjMaT/aFQ=="],
 
     "@keyv/serialize": ["@keyv/serialize@1.1.1", "", {}, "sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA=="],
+
+    "@parse-org-set/cli": ["@parse-org-set/cli@workspace:packages/cli"],
+
+    "@parse-org-set/core": ["@parse-org-set/core@workspace:packages/core"],
+
+    "@parse-org-set/web": ["@parse-org-set/web@workspace:packages/web"],
 
     "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Web-standard APIs only (TextDecoder, DataView...). No Bun or Node
+    // types, so Buffer, process and Bun.* are type errors in core.
+    "lib": ["ES2022", "DOM"],
+    "types": []
+  },
+  "include": ["src"]
+}

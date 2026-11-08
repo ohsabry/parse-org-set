@@ -21,6 +21,9 @@
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
     "lint": "eslint .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "tsc": "tsc -p packages/core && tsc -p packages/core/test && tsc -p packages/cli",
+    "test": "bun test",
+    "verify": "bun run tsc && bun run lint && bun run fmt:check && bun test"
   }
 }

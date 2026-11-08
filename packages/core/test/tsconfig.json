@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // Tests need the bun:test types; library code doesn't get them.
+    "types": ["bun"]
+  },
+  "include": ["."]
+}

@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // The CLI runs in Bun, so it may use Bun's APIs.
+    "types": ["bun"]
+  },
+  "include": ["src"]
+}

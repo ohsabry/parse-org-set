@@ -1,0 +1,9 @@
+{
+  "name": "@parse-org-set/cli",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@parse-org-set/core": "workspace:*"
+  }
+}
