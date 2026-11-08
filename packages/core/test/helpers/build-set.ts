@@ -28,6 +28,10 @@ export interface FakeInstrument {
   samples: FakeSample[]
   /** Bytes of zero-filled stand-in settings. Real ones vary in size. Default 62. */
   settingsLength?: number
+  /** The type byte (+124 after the text): 0 melodic, 1 drum, 2 audio. Default 0. */
+  kind?: number
+  /** A header with only a name, 3 zero bytes and the count, like one real header. */
+  bare?: boolean
 }
 
 export interface FakeSet {
@@ -77,6 +81,14 @@ function instrumentHeader(instrument: FakeInstrument, version: string): Uint8Arr
   if (count > 255) {
     throw new Error(`An instrument holds at most 255 samples (its count is one byte), got ${count}`)
   }
+  if (instrument.bare === true) {
+    const name = encoder.encode(instrument.name)
+    const bare = new Uint8Array(4 + name.length + 3 + 1)
+    new DataView(bare.buffer).setUint32(0, name.length, true)
+    bare.set(name, 4)
+    bare[bare.length - 1] = count
+    return bare
+  }
   const text = encoder.encode(`${instrument.name}\r${version}\r`)
   const settingsLength = instrument.settingsLength ?? FAKE_SETTINGS_LENGTH
   const out = new Uint8Array(4 + text.length + 5 + ROOT_NOTE_AREA_LENGTH + settingsLength + 1)
@@ -87,7 +99,10 @@ function instrumentHeader(instrument: FakeInstrument, version: string): Uint8Arr
   out[afterText + 4] = 0x01
   const roots = instrument.samples.slice(0, MAX_LISTED_ROOT_NOTES).map((r) => r.rootNote)
   out.set(roots, afterText + 5)
-  // GUESS: the settings block is left as zeros.
+  // GUESS: the rest of the settings block is left as zeros.
+  if (afterText + 124 < out.length - 1) {
+    out[afterText + 124] = instrument.kind ?? 0
+  }
   out[out.length - 1] = count // confirmed: last byte = number of samples that follow
   return out
 }

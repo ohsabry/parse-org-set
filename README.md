@@ -40,11 +40,20 @@ The first instrument header starts at byte 485.
 | Text           | UTF-8  | Name, then `\r` and the version that saved it (`-` = no name)            |
 | (unknown)      | 5 B    | An int32 that is 0 or −1, then one byte                                  |
 | Root-note list | bytes  | Root notes of the samples that follow, one byte each, at most 51 entries |
-| (unknown)      | varies | Not decoded                                                              |
+| (unknown)      | varies | Not decoded, except the instrument type (below)                          |
+| Attack         | uint8  | In 100 ms steps (0–100, up to 10 s)                                      |
+| Decay          | uint8  | In 100 ms steps                                                          |
+| Release        | uint8  | In 100 ms steps                                                          |
+| (unknown)      | uint8  |                                                                          |
+| Auto release   | uint8  | 0 = off, 1 = on                                                          |
+| (unknown)      | uint8  | 0                                                                        |
 | Sample count   | uint8  | Number of samples that follow (the header's last byte)                   |
 
+The byte 124 bytes after the end of the text is the **instrument type**: 0 = melodic,
+1 = drum kit, 2 = audio phrase. The first instrument (Shots) is a drum kit.
+
 Instruments with more than 51 samples list only the first 51 root notes. One real instrument
-header has only the name, 3 bytes and the count.
+header has only the name, 3 bytes and the count, and none of the settings above.
 
 ### Sample (97 bytes + audio)
 

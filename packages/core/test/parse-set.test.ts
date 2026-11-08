@@ -65,6 +65,38 @@ describe('parseSet', () => {
   })
 })
 
+describe('instrument settings', () => {
+  test('a header with only a name has no kind or envelope', () => {
+    const set = parseSet(
+      buildSet({
+        instruments: [
+          { name: '-', samples: [mono('click', 0, 4)] },
+          { name: 'Sax Breath', samples: [mono('sax', 60, 4)], bare: true },
+        ],
+      }),
+    )
+    expect(set.instruments[1]?.name).toBe('Sax Breath')
+    expect(set.instruments[1]?.kind).toBeUndefined()
+    expect(set.instruments[1]?.envelope).toBeUndefined()
+  })
+
+  test('a header too short to hold the settings has no kind or envelope', () => {
+    const set = parseSet(
+      buildSet({ instruments: [{ name: '-', samples: [mono('click', 0, 4)], settingsLength: 0 }] }),
+    )
+    expect(set.instruments[0]?.kind).toBeUndefined()
+    expect(set.instruments[0]?.envelope).toBeUndefined()
+  })
+
+  test('a type value never seen in real files gives undefined, not a guess', () => {
+    const set = parseSet(
+      buildSet({ instruments: [{ name: '-', samples: [mono('click', 0, 4)], kind: 7 }] }),
+    )
+    expect(set.instruments[0]?.kind).toBeUndefined()
+    expect(set.instruments[0]?.envelope).toBeDefined()
+  })
+})
+
 describe('parseSet on broken files', () => {
   /** The offset of the Shots header's sample-count byte: just before its first sample. */
   function shotsCountByte(bytes: Uint8Array): number {

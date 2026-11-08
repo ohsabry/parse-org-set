@@ -23,11 +23,19 @@ const set: SetFile = {
   trailerOffset: 0,
   instruments: [
     // 0.5 s + 0.25 s at 48 kHz
-    { name: '-', headerOffset: 485, samples: [sample(0, 24000, 48000), sample(1, 12000, 48000)] },
+    {
+      name: '-',
+      headerOffset: 485,
+      kind: undefined,
+      envelope: undefined,
+      samples: [sample(0, 24000, 48000), sample(1, 12000, 48000)],
+    },
     // 3 × 20 s at 44.1 kHz = 60 s
     {
       name: 'نااااي',
       headerOffset: 0,
+      kind: undefined,
+      envelope: undefined,
       samples: [sample(48, 882000, 44100), sample(52, 882000, 44100), sample(55, 882000, 44100)],
     },
   ],

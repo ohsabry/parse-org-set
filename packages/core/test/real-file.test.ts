@@ -86,6 +86,35 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
     expect(outside).toEqual([])
   })
 
+  test('instrument types fit the names: Shots is a drum kit, "(Audio)" ones are audio', () => {
+    // The names were written by the sound designer; the type byte by the app.
+    const { set } = real()
+    expect(set.instruments[0]?.kind).toBe('drum')
+    const notAudio: string[] = []
+    for (const instrument of set.instruments) {
+      if (instrument.name.includes('(Audio)') && instrument.kind !== 'audio') {
+        notAudio.push(instrument.name)
+      }
+    }
+    expect(notAudio).toEqual([])
+  })
+
+  test('envelope times are within what the app allows (0 to 10,000 ms)', () => {
+    const outside: string[] = []
+    for (const instrument of real().set.instruments) {
+      const e = instrument.envelope
+      if (e === undefined) {
+        continue
+      }
+      for (const ms of [e.attackMs, e.decayMs, e.releaseMs]) {
+        if (ms > 10000) {
+          outside.push(`${instrument.name}: ${ms} ms`)
+        }
+      }
+    }
+    expect(outside).toEqual([])
+  })
+
   test('the trailer starts like a header with an empty name (hypothesis)', () => {
     const { bytes, set } = real()
     if (set.trailerOffset === bytes.length) {

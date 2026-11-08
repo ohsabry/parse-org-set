@@ -13,7 +13,23 @@ export interface Instrument {
   name: string
   /** Where the instrument header starts. */
   headerOffset: number
+  /** Undefined if the header has no settings or an unknown type value. */
+  kind: InstrumentKind | undefined
+  /** Undefined if the header has no settings. */
+  envelope: Envelope | undefined
   samples: Sample[]
+}
+
+/** Melodic instruments are pitched; drum kits play one sound per key; audio instruments hold phrases. */
+export type InstrumentKind = 'melodic' | 'drum' | 'audio'
+
+/** The amplitude envelope, as set in the ORG 24 app (sustain isn't decoded for 1.3.x yet). */
+export interface Envelope {
+  attackMs: number
+  decayMs: number
+  releaseMs: number
+  /** The app's "auto release" switch. */
+  autoRelease: boolean
 }
 
 export interface Loop {

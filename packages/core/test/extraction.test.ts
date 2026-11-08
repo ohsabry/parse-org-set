@@ -63,10 +63,18 @@ const set: SetFile = {
   version: '1.3.1',
   trailerOffset: 0,
   instruments: [
-    { name: '-', headerOffset: 485, samples: [sample('Metronome Long', 0, 24000)] },
+    {
+      name: '-',
+      headerOffset: 485,
+      kind: undefined,
+      envelope: undefined,
+      samples: [sample('Metronome Long', 0, 24000)],
+    },
     {
       name: 'Organ (Stereo)',
       headerOffset: 0,
+      kind: undefined,
+      envelope: undefined,
       // Two samples with the same name and root note.
       samples: [sample('-', 60, 4800), sample('-', 60, 4800), sample('A#5   ', 82, 100)],
     },
@@ -102,7 +110,13 @@ describe('planExtraction', () => {
   test('numbers get wider when there are more than 99 instruments', () => {
     const many: SetFile = { ...set, instruments: [] }
     for (let i = 0; i < 120; i++) {
-      many.instruments.push({ name: `i${i}`, headerOffset: 0, samples: [sample('s', 60, 10)] })
+      many.instruments.push({
+        name: `i${i}`,
+        headerOffset: 0,
+        kind: undefined,
+        envelope: undefined,
+        samples: [sample('s', 60, 10)],
+      })
     }
     const paths = planExtraction('x.Set', many).files.map((f) => f.path)
     expect(paths[0]).toBe('001_Shots/001_C4_s.wav')

@@ -1,5 +1,6 @@
 import { SetFormatError } from './errors/set-format-error'
 import { readFileHeader } from './file-header'
+import { readInstrumentSettings } from './instrument-settings'
 import { ByteReader } from './reader'
 import { SAMPLE_HEADER_LENGTH, readSample, sampleProblem } from './sample'
 import type { Instrument, Sample, SetFile } from './types'
@@ -90,7 +91,12 @@ function readInstrument(reader: ByteReader, headerOffset: number, firstSample: n
     )
   }
   // "Name\r1.3.1\r": the name is everything before the first \r.
-  const name = reader.utf8(textLength).split('\r')[0] ?? ''
+  const text = reader.utf8(textLength)
+  const name = text.split('\r')[0] ?? ''
+  // A header with only a name (no "\r" and version) has no settings.
+  const { kind, envelope } = text.includes('\r')
+    ? readInstrumentSettings(reader, headerOffset + 4 + textLength, firstSample)
+    : { kind: undefined, envelope: undefined }
 
   reader.seek(firstSample - 1)
   const count = reader.u8()
@@ -107,5 +113,5 @@ function readInstrument(reader: ByteReader, headerOffset: number, firstSample: n
       )
     }
   }
-  return { name, headerOffset, samples }
+  return { name, headerOffset, kind, envelope, samples }
 }
