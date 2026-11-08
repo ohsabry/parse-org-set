@@ -7,15 +7,27 @@ import { formatSummary } from './summary'
 
 const USAGE = `Usage:
   parse-org-set inspect <file.Set>
-  parse-org-set extract <file.Set> [folder]   (folder defaults to <set name>_samples)`
+  parse-org-set extract <file.Set> [folder] [--ascii]
+
+  folder   defaults to <set name>_samples
+  --ascii  use only ASCII in folder and file names (Arabic uses the Arabic chat alphabet)`
 
 /** Runs the command line and returns the exit code: 0 on success, 1 on any error. */
 async function main(args: string[]): Promise<number> {
-  const [command, path, folder, ...extra] = args
+  // --ascii can go anywhere; everything else is positional.
+  const ascii = args.includes('--ascii')
+  const positional: string[] = []
+  for (const arg of args) {
+    if (arg !== '--ascii') {
+      positional.push(arg)
+    }
+  }
+  const [command, path, folder, ...extra] = positional
   const valid =
     path !== undefined &&
     extra.length === 0 &&
-    ((command === 'inspect' && folder === undefined) || command === 'extract')
+    !positional.some((arg) => arg.startsWith('--')) &&
+    ((command === 'inspect' && folder === undefined && !ascii) || command === 'extract')
   if (!valid) {
     console.error(USAGE)
     return 1
@@ -32,9 +44,9 @@ async function main(args: string[]): Promise<number> {
     return 0
   }
 
-  const target = folder ?? defaultOutputFolder(fileName)
+  const target = folder ?? defaultOutputFolder(fileName, { ascii })
   try {
-    const written = writeExtraction(bytes, fileName, set, target)
+    const written = writeExtraction(bytes, fileName, set, target, { ascii })
     console.log(
       `Wrote ${written.files.toLocaleString('en-US')} WAV files in ${written.folders} folders to ${target}/`,
     )

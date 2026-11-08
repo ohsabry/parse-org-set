@@ -39,6 +39,34 @@ describe('safeName', () => {
   })
 })
 
+test('ascii mode: every path is plain ASCII', () => {
+  const arabic: SetFile = {
+    version: '1.3.1',
+    trailerOffset: 0,
+    instruments: [
+      {
+        name: '-',
+        headerOffset: 0,
+        kind: 'drum',
+        envelope: undefined,
+        samples: [sample('قانون🔥', 60, 10)],
+      },
+      {
+        name: '❌الناي',
+        headerOffset: 0,
+        kind: 'melodic',
+        envelope: undefined,
+        samples: [sample('🌀', 62, 10)],
+      },
+    ],
+  }
+  const paths = planExtraction('x.Set', arabic, { ascii: true }).files.map((f) => f.path)
+  expect(paths).toEqual(['01_Shots/001_C4_qanon.wav', '02_alnai/001_D4_unnamed.wav'])
+  expect(defaultOutputFolder('سيت الأصوات2023.Set', { ascii: true })).toBe(
+    'sit_alasoat2023_samples',
+  )
+})
+
 test('defaultOutputFolder', () => {
   expect(defaultOutputFolder('سيت الأصوات2023.Set')).toBe('سيت_الأصوات2023_samples')
   expect(defaultOutputFolder('pack.set')).toBe('pack_samples')

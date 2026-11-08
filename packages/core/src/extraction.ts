@@ -1,3 +1,4 @@
+import { toAscii } from './ascii'
 import { noteName } from './notes'
 import type { Loop, Sample, SetFile } from './types'
 
@@ -73,9 +74,9 @@ export function safeName(text: string): string {
 }
 
 /** "سيت الأصوات2023.Set" → "سيت_الأصوات2023_samples". */
-export function defaultOutputFolder(setFileName: string): string {
+export function defaultOutputFolder(setFileName: string, options: NameOptions = {}): string {
   const withoutExtension = setFileName.replace(/\.set$/i, '')
-  return `${safeName(withoutExtension)}_samples`
+  return `${fileName(withoutExtension, options)}_samples`
 }
 
 /**
@@ -86,6 +87,7 @@ export function defaultOutputFolder(setFileName: string): string {
 export function planExtraction(
   sourceName: string,
   set: SetFile,
+  options: NameOptions = {},
 ): { files: PlannedFile[]; index: ExtractionIndex } {
   const files: PlannedFile[] = []
   const index: ExtractionIndex = { source: sourceName, version: set.version, instruments: [] }
@@ -94,7 +96,7 @@ export function planExtraction(
   for (const [i, instrument] of set.instruments.entries()) {
     // The first group's header is named "-"; we call it Shots.
     const label = i === 0 ? 'Shots' : instrument.name
-    const folder = `${pad(i + 1, folderDigits)}_${safeName(label)}`
+    const folder = `${pad(i + 1, folderDigits)}_${fileName(label, options)}`
     const fileDigits = Math.max(3, String(instrument.samples.length).length)
     const entry: ExtractionIndex['instruments'][number] = {
       folder,
@@ -104,7 +106,7 @@ export function planExtraction(
 
     for (const [j, sample] of instrument.samples.entries()) {
       const note = noteName(sample.rootNote)
-      const file = `${pad(j + 1, fileDigits)}_${note}_${safeName(sample.name)}.wav`
+      const file = `${pad(j + 1, fileDigits)}_${note}_${fileName(sample.name, options)}.wav`
       files.push({ path: `${folder}/${file}`, sample })
       entry.samples.push({
         file,
@@ -121,6 +123,15 @@ export function planExtraction(
     index.instruments.push(entry)
   }
   return { files, index }
+}
+
+/** `ascii: true` makes every folder and file name plain ASCII (Arabic in the Arabic chat alphabet). */
+export interface NameOptions {
+  ascii?: boolean
+}
+
+function fileName(text: string, options: NameOptions): string {
+  return safeName(options.ascii === true ? toAscii(text) : text)
 }
 
 function pad(n: number, digits: number): string {

@@ -1,11 +1,13 @@
 export { OutOfBoundsError } from './errors/out-of-bounds-error'
 export { ByteReader } from './reader'
 export { SetFormatError } from './errors/set-format-error'
+export { toAscii } from './ascii'
 export {
   defaultOutputFolder,
   planExtraction,
   safeName,
   type ExtractionIndex,
+  type NameOptions,
   type PlannedFile,
 } from './extraction'
 export { describeSpacing, noteName } from './notes'

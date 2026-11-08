@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { encodeWav, planExtraction, type SetFile } from '@parse-org-set/core'
+import { encodeWav, planExtraction, type NameOptions, type SetFile } from '@parse-org-set/core'
 
 import { ExtractError } from './errors/extract-error'
 
@@ -15,6 +15,7 @@ export function writeExtraction(
   sourceName: string,
   set: SetFile,
   folder: string,
+  options: NameOptions = {},
 ): { files: number; folders: number } {
   if (existsSync(folder)) {
     if (!statSync(folder).isDirectory()) {
@@ -25,7 +26,7 @@ export function writeExtraction(
     }
   }
 
-  const { files, index } = planExtraction(sourceName, set)
+  const { files, index } = planExtraction(sourceName, set, options)
   mkdirSync(folder, { recursive: true })
   for (const instrument of index.instruments) {
     mkdirSync(join(folder, instrument.folder))

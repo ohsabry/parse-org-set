@@ -91,6 +91,27 @@ describe('parse-org-set extract', () => {
     expect(wavSamples(join(out, '02_Organ_(Stereo)/001_E2_low.wav'))).toEqual([5, -5, 6, -6])
   })
 
+  test('--ascii writes only ASCII folder and file names', () => {
+    const dir = workspace()
+    writeFileSync(
+      join(dir, 'عود.Set'),
+      buildSet({
+        instruments: [
+          {
+            name: '-',
+            samples: [
+              { name: 'قانون', rootNote: 60, rate: 48000, channels: 1, audio: Int16Array.from([1]) },
+            ],
+          },
+        ],
+      }),
+    )
+    const { code, stdout } = run(dir, 'عود.Set', '--ascii')
+    expect(code).toBe(0)
+    expect(stdout).toBe('Wrote 1 WAV files in 1 folders to 3od_samples/\n')
+    expect(readdirSync(join(dir, '3od_samples/01_Shots'))).toEqual(['001_C4_qanon.wav'])
+  })
+
   test('index.json keeps the original names', () => {
     const dir = workspace()
     run(dir, 'my pack.Set')

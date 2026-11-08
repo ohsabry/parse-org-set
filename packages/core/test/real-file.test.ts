@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
 
-import { ByteReader, parseSet, type Sample, type SetFile } from '../src/index'
+import { ByteReader, parseSet, planExtraction, type Sample, type SetFile } from '../src/index'
 
 // Optional smoke test against a real 1.3.x .Set file, which can't be committed:
 //
@@ -113,6 +113,20 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
       }
     }
     expect(outside).toEqual([])
+  })
+
+  test('in ascii mode every extracted path is plain ASCII, and still unique', () => {
+    const { files } = planExtraction('real.Set', real().set, { ascii: true })
+    const notAscii: string[] = []
+    const seen = new Set<string>()
+    for (const { path } of files) {
+      if (!/^[\x20-\x7e]+$/.test(path)) {
+        notAscii.push(path)
+      }
+      seen.add(path.toLowerCase())
+    }
+    expect(notAscii).toEqual([])
+    expect(seen.size).toBe(files.length)
   })
 
   test('the trailer starts like a header with an empty name (hypothesis)', () => {
