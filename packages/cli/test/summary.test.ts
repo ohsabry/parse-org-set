@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import type { Sample, SetFile } from '@parse-org-set/core'
 
-import { formatDuration, formatSummary } from '../src/summary'
+import { formatSummary } from '../src/summary'
 
 function sample(rootNote: number, frames: number, sampleRate: number): Sample {
   return {
@@ -93,13 +93,4 @@ test('counts layers in the samples, labels them, and mentions the sample pool', 
   )
   expect(lines[4]?.split(/\s{2,}/)[1]).toBe('2') // the main sample plus the layer's
   expect(lines[4]?.endsWith('Shots (+1 layer)')).toBe(true)
-})
-
-describe('formatDuration', () => {
-  test('picks a unit that suits the length', () => {
-    expect(formatDuration(0.37)).toBe('0.4 s')
-    expect(formatDuration(38.2)).toBe('38 s')
-    expect(formatDuration(127)).toBe('2 min 7 s')
-    expect(formatDuration(3725)).toBe('1 h 2 min')
-  })
 })

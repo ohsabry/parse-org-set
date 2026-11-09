@@ -1,0 +1,9 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    // Tests run in Bun, so they may use its APIs (to run `unzip`, for example).
+    "lib": ["ES2022", "DOM"],
+    "types": ["bun"]
+  },
+  "include": ["."]
+}

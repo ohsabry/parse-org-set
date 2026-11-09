@@ -83,3 +83,13 @@ export function describeSpacing(rootNotes: number[]): string {
 function every(step: number): string {
   return step === 1 ? 'every semitone' : `every ${step}`
 }
+
+/** "C2–B4" for the lowest and highest root notes, one note if they're equal, or "-" for none. */
+export function noteRange(rootNotes: number[]): string {
+  if (rootNotes.length === 0) {
+    return '-'
+  }
+  const low = noteLabel(Math.min(...rootNotes))
+  const high = noteLabel(Math.max(...rootNotes))
+  return low === high ? low : `${low}–${high}`
+}

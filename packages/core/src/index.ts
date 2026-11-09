@@ -1,3 +1,4 @@
+export { formatDuration, totalSeconds } from './durations'
 export { SetFormatError } from './errors/set-format-error'
 export {
   defaultOutputFolder,
@@ -8,7 +9,7 @@ export {
   type NameOptions,
   type PlannedFile,
 } from './extraction'
-export { describeSpacing, noteLabel } from './notes'
+export { describeSpacing, noteLabel, noteRange } from './notes'
 export { parseSet } from './parse-set'
 export { planSimpleExtraction } from './simple'
 export type {
@@ -21,4 +22,4 @@ export type {
   Sample,
   SetFile,
 } from './types'
-export { encodeWav, type WavAudio } from './wav'
+export { encodeWav, wavHeader, type WavAudio } from './wav'

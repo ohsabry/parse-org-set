@@ -22,7 +22,7 @@
     "fmt:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "tsc": "tsc -p packages/core && tsc -p packages/core/test && tsc -p packages/cli && tsc -p packages/cli/test",
+    "tsc": "tsc -p packages/core && tsc -p packages/core/test && tsc -p packages/cli && tsc -p packages/cli/test && tsc -p packages/web && tsc -p packages/web/test",
     "test": "bun test",
     "verify": "bun run tsc && bun run lint && bun run fmt:check && bun test",
     "inspect": "bun packages/cli/src/main.ts inspect",

@@ -31,20 +31,37 @@ export interface WavAudio {
  *  44  …                 the audio
  */
 export function encodeWav({ sampleRate, channels, audio }: WavAudio): Uint8Array {
+  const out = new Uint8Array(HEADER_LENGTH + audio.length)
+  out.set(wavHeader({ sampleRate, channels, audioLength: audio.length }))
+  out.set(audio, HEADER_LENGTH)
+  return out
+}
+
+/**
+ * Just the 44-byte header (layout above) for `audioLength` bytes of audio.
+ * Writing the header and then the audio as it is gives the same bytes as
+ * encodeWav, without first copying the audio into one new array, which
+ * matters when a whole set's audio is being zipped.
+ */
+export function wavHeader({
+  sampleRate,
+  channels,
+  audioLength,
+}: Omit<WavAudio, 'audio'> & { audioLength: number }): Uint8Array {
   const blockAlign = channels * 2
-  if (audio.length % blockAlign !== 0) {
+  if (audioLength % blockAlign !== 0) {
     throw new RangeError(
-      `Audio must be whole frames: ${audio.length} bytes isn't a multiple of ${blockAlign}`,
+      `Audio must be whole frames: ${audioLength} bytes isn't a multiple of ${blockAlign}`,
     )
   }
   if (!Number.isInteger(sampleRate) || sampleRate <= 0) {
     throw new RangeError(`Sample rate must be a positive whole number, got ${sampleRate}`)
   }
 
-  const out = new Uint8Array(HEADER_LENGTH + audio.length)
+  const out = new Uint8Array(HEADER_LENGTH)
   const view = new DataView(out.buffer)
   writeAscii(out, 0, 'RIFF')
-  view.setUint32(4, HEADER_LENGTH - 8 + audio.length, true)
+  view.setUint32(4, HEADER_LENGTH - 8 + audioLength, true)
   writeAscii(out, 8, 'WAVE')
 
   writeAscii(out, 12, 'fmt ')
@@ -57,8 +74,7 @@ export function encodeWav({ sampleRate, channels, audio }: WavAudio): Uint8Array
   view.setUint16(34, 16, true)
 
   writeAscii(out, 36, 'data')
-  view.setUint32(40, audio.length, true)
-  out.set(audio, HEADER_LENGTH)
+  view.setUint32(40, audioLength, true)
   return out
 }
 
