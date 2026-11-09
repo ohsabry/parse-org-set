@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>parse-org-set: extract the audio samples in ORG 24 .Set files</title>
+    <title>Sample Extractor for ORG 24: WAV files from .Set and .Instrument files</title>
     <meta
       name="description"
       content="Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument. Runs in your browser; nothing is uploaded."
@@ -13,7 +13,7 @@
     <meta name="color-scheme" content="light dark" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ohsabry.github.io/parse-org-set/" />
-    <meta property="og:title" content="parse-org-set" />
+    <meta property="og:title" content="Sample Extractor for ORG 24" />
     <meta
       property="og:description"
       content="Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument. Runs in your browser; nothing is uploaded."
@@ -29,7 +29,7 @@
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "parse-org-set",
+        "name": "Sample Extractor for ORG 24",
         "url": "https://ohsabry.github.io/parse-org-set/",
         "description": "Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument.",
         "applicationCategory": "MultimediaApplication",
@@ -44,14 +44,15 @@
   <body>
     <main>
       <header>
-        <h1>parse-org-set</h1>
+        <h1>Sample Extractor for ORG 24</h1>
       </header>
 
       <!-- Text is wrapped per language (data-lang); the CSS shows the current one. English only for now. -->
       <p>
         <span data-lang="en" lang="en"
-          >Extract the audio samples inside <a href="https://sofeh.com">ORG 24</a> .Set and
-          .Instrument files, as WAV files organized by instrument.</span
+          >Extract the audio samples inside <a href="https://sofeh.com">ORG 24</a>
+          <code>.Set</code> and <code>.Instrument</code> files, as WAV files organized by
+          instrument.</span
         >
       </p>
       <p>
@@ -61,13 +62,10 @@
         >
       </p>
 
-      <!-- The whole box is the file input's label, so a click or tap anywhere opens the picker. -->
+      <!-- The box is the file input's label: a click or tap anywhere in it opens the picker. -->
       <label class="drop">
-        <span data-lang="en" lang="en">Drop a file here, or</span>
-        <span class="button">
-          <span data-lang="en" lang="en">Choose file</span>
-        </span>
-        <input type="file" accept=".Set,.set,.Instrument,.instrument" class="visually-hidden" />
+        <span data-lang="en" lang="en">Drop a file here, or choose one:</span>
+        <input type="file" accept=".Set,.set,.Instrument,.instrument" />
       </label>
 
       <footer>

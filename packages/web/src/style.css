@@ -63,7 +63,23 @@ a {
   color: var(--link);
 }
 
-/* The whole box is a <label> for the hidden file input, so clicking anywhere opens the picker. */
+code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+/* The text on its own line, then the input, both centred by the box. */
+.drop > span {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.drop input {
+  max-width: 100%;
+  font: inherit;
+}
+
+/* The drop area: a dashed box around the native file input. */
 .drop {
   display: block;
   margin: 1.5rem 0;
@@ -73,31 +89,11 @@ a {
   cursor: pointer;
 }
 
-.button {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--text);
-  color: var(--text);
-  font: inherit;
-  background: transparent;
-  cursor: pointer;
-}
-
 /* Keyboard users always see where they are. */
 :focus-visible,
 .drop:focus-within {
   outline: 2px solid var(--link);
   outline-offset: 2px;
-}
-
-/* Hidden but still reachable by keyboard and screen readers. */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 footer {
