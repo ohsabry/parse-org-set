@@ -25,6 +25,10 @@ export interface FakeSample {
    * header. Samples with the same ID share one pool entry.
    */
   poolId?: number
+  /** 1.10 only. How R+1 marks the name: its length (default), or 0x20 with a null-padded name. */
+  nameStyle?: 'length' | 'null-padded'
+  /** 1.10 only: leftover bytes after a length-marked name, which readers must ignore. */
+  nameLeftovers?: string
 }
 
 export interface FakeInstrument {
@@ -40,7 +44,7 @@ export interface FakeInstrument {
 }
 
 export interface FakeSet {
-  /** Default '1.3.1'. */
+  /** Default '1.3.1'. '1.10' writes samples the 1.10 way. */
   version?: string
   /** The first one is the Shots group. */
   instruments: FakeInstrument[]
@@ -65,7 +69,7 @@ export function buildSet(set: FakeSet): Uint8Array {
   for (const instrument of set.instruments) {
     chunks.push(instrumentHeader(instrument, version))
     for (const sample of instrument.samples) {
-      chunks.push(sampleBytes(sample))
+      chunks.push(buildSample(sample, version))
     }
   }
   return concat(chunks)
@@ -155,7 +159,8 @@ function instrumentHeader(instrument: FakeInstrument, version: string): Uint8Arr
   return out
 }
 
-function sampleBytes(sample: FakeSample): Uint8Array {
+/** One sample: its 97-byte header, then its audio unless it's in the pool. */
+export function buildSample(sample: FakeSample, version = '1.3.1'): Uint8Array {
   const { audio, channels } = sample
   if (audio.length === 0 || audio.length % channels !== 0) {
     throw new Error(
@@ -163,9 +168,14 @@ function sampleBytes(sample: FakeSample): Uint8Array {
     )
   }
   const frames = audio.length / channels
+  const old = version === '1.10'
   const name = encoder.encode(sample.name)
-  if (name.length > NAME_FIELD_LENGTH) {
+  const leftovers = encoder.encode(sample.nameLeftovers ?? '')
+  if (name.length + leftovers.length > NAME_FIELD_LENGTH) {
     throw new Error(`Sample name is ${name.length} bytes; the field holds ${NAME_FIELD_LENGTH}`)
+  }
+  if (old && sample.rate > 0xffff) {
+    throw new Error(`1.10 stores only a 16-bit rate, so ${sample.rate} Hz doesn't fit`)
   }
   const loop = sample.loop ?? { mode: 0, start: 0, end: frames - 1 }
   const pooled = sample.poolId !== undefined
@@ -173,12 +183,14 @@ function sampleBytes(sample: FakeSample): Uint8Array {
   const out = new Uint8Array(SAMPLE_HEADER_LENGTH)
   const view = new DataView(out.buffer)
   out[0] = sample.rootNote
-  out[1] = 0x20
+  // 1.10: the name's length, unless the name is null-padded. Later: always 0x20.
+  out[1] = old && sample.nameStyle !== 'null-padded' ? name.length : 0x20
   out.set(name, 2)
+  out.set(leftovers, 2 + name.length)
   view.setUint16(33, sample.rate & 0xffff, true) // low 16 bits only
   out[35] = 16 // bits per sample
   out[36] = channels
-  view.setUint32(37, sample.rate, true) // full rate
+  view.setUint32(37, old ? 0 : sample.rate, true) // full rate (0 in 1.10)
   // 0 = audio follows; N = audio is pool entry N − 1
   view.setUint32(41, pooled ? (sample.poolId ?? 0) + 1 : 0, true)
   view.setUint32(45, frames, true)

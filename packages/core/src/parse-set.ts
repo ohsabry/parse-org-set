@@ -2,7 +2,13 @@ import { SetFormatError } from './errors/set-format-error'
 import { readFileHeader } from './file-header'
 import { readInstrumentSettings } from './instrument-settings'
 import { ByteReader } from './reader'
-import { SAMPLE_HEADER_LENGTH, readSample, sampleProblem } from './sample'
+import {
+  SAMPLE_HEADER_LENGTH,
+  readSample,
+  sampleLayout,
+  sampleProblem,
+  type SampleLayout,
+} from './sample'
 import type { Instrument, PoolEntry, Sample, SetFile } from './types'
 import { startsWith } from './utils'
 
@@ -18,7 +24,7 @@ interface Group {
 }
 
 /**
- * Parses a .Set file, versions 1.2.x to 1.4.x. Audio isn't copied: each
+ * Parses a .Set file, version 1.10 or 1.2.x to 1.4.x. Audio isn't copied: each
  * sample says where its audio is in `bytes`, either right after its header or
  * in the file's sample pool. Throws SetFormatError if the bytes don't fit.
  *
@@ -41,10 +47,11 @@ export function parseSet(bytes: Uint8Array): SetFile {
     version.startsWith('1.4.') ? `\r${version}` : `\r${version}\r`,
   )
 
+  const layout = sampleLayout(version)
   const groups: Group[] = []
   let at = firstInstrumentOffset
   for (;;) {
-    const firstSample = findNextSample(reader, at, pool)
+    const firstSample = findNextSample(reader, at, pool, layout)
     if (firstSample === undefined) {
       const orphan = namedHeaderAt(reader, at)
       if (orphan !== undefined) {
@@ -76,9 +83,10 @@ function findNextSample(
   reader: ByteReader,
   from: number,
   pool: ReadonlyMap<number, PoolEntry>,
+  layout: SampleLayout,
 ): number | undefined {
   for (let offset = from; offset + SAMPLE_HEADER_LENGTH <= reader.length; offset++) {
-    if (sampleProblem(reader, offset, pool) === undefined) {
+    if (sampleProblem(reader, offset, pool, layout) === undefined) {
       return offset
     }
   }
@@ -198,7 +206,7 @@ function readGroup(
   const count = reader.u8()
   for (let i = 0; i < count; i++) {
     try {
-      samples.push(readSample(reader, pool))
+      samples.push(readSample(reader, pool, sampleLayout(version)))
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       throw new SetFormatError(

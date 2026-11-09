@@ -177,3 +177,37 @@ describe('parseSet on broken files', () => {
     expect(() => parseSet(buildSet({ instruments: [] }))).toThrow('No samples found')
   })
 })
+
+describe('parseSet on 1.10 files', () => {
+  test('walks a set whose samples use both 1.10 name styles', () => {
+    const at = (rate: number, sample: FakeSample): FakeSample => ({ ...sample, rate })
+    const set = parseSet(
+      buildSet({
+        version: '1.10',
+        instruments: [
+          { name: '-', samples: [at(22050, { ...mono('Metronome', 0, 4), nameLeftovers: 'xx' })] },
+          {
+            name: 'Strings (Stereo)',
+            samples: [
+              at(48000, { ...mono('NewSample_0000', 40, 6), nameStyle: 'null-padded' }),
+              at(16000, mono('STR E3', 52, 3)),
+            ],
+            settingsLength: 300,
+          },
+        ],
+      }),
+    )
+    expect(set.version).toBe('1.10')
+    const seen: string[] = []
+    for (const instrument of set.instruments) {
+      for (const sample of instrument.samples) {
+        seen.push(`${instrument.name}: ${sample.name} ${sample.sampleRate} Hz ${sample.frames}`)
+      }
+    }
+    expect(seen).toEqual([
+      '-: Metronome 22050 Hz 4',
+      'Strings (Stereo): NewSample_0000 48000 Hz 6',
+      'Strings (Stereo): STR E3 16000 Hz 3',
+    ])
+  })
+})

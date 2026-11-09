@@ -4,7 +4,7 @@ import { readFileHeader } from '../src/file-header'
 import { parseSet, planExtraction, type Sample, type SetFile } from '../src/index'
 import { ByteReader } from '../src/reader'
 
-// Optional smoke test against a real .Set file (1.2.x to 1.4.x), which can't be committed:
+// Optional smoke test against a real .Set file (1.10 or 1.2.x to 1.4.x), which can't be committed:
 //
 //   PARSE_ORG_SET_FILE=~/path/to/some.Set bun test
 //
@@ -110,7 +110,10 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
   test('instrument types fit the names: Shots is a drum kit, "(Audio)" ones are audio', () => {
     // The names were written by the sound designer; the type byte by the app.
     const { set } = real()
-    expect(set.instruments[0]?.kind).toBe('drum')
+    // In the one 1.10 set seen, Shots holds only the metronome and is typed melodic.
+    if (set.version !== '1.10') {
+      expect(set.instruments[0]?.kind).toBe('drum')
+    }
     const notAudio: string[] = []
     for (const instrument of set.instruments) {
       if (instrument.name.includes('(Audio)') && instrument.kind !== 'audio') {

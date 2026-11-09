@@ -4,8 +4,8 @@ import type { PoolEntry } from './types'
 import { startsWith } from './utils'
 
 const TITLE = 'music studio music'
-// Versions seen in real files: 1.2.8, 1.3.0, 1.3.1 and 1.4.9.
-const SUPPORTED = /^1\.[234]\.\d+$/
+// Versions seen in real files: 1.10, 1.2.8, 1.3.0, 1.3.1 and 1.4.9.
+const SUPPORTED = /^1\.(10|[234]\.\d+)$/
 
 // After the version text come `ff ff` and 14 more bytes (not decoded), then a
 // text field: a uint32 character count and the characters. Before 1.4 each
@@ -57,7 +57,7 @@ export function readFileHeader(reader: ByteReader): FileHeader {
   const version = cleanVersion(reader.bytes(textLength))
   if (!SUPPORTED.test(version)) {
     throw new SetFormatError(
-      `Version ${JSON.stringify(version)} isn't supported (only 1.2.x to 1.4.x)`,
+      `Version ${JSON.stringify(version)} isn't supported (only 1.10 and 1.2.x to 1.4.x)`,
       36,
     )
   }

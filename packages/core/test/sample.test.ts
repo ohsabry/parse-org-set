@@ -4,6 +4,7 @@ import { SetFormatError } from '../src/index'
 import { ByteReader } from '../src/reader'
 import { readSample, sampleProblem } from '../src/sample'
 import { SAMPLE_HEADERS } from './fixtures/real-bytes'
+import { buildSample, type FakeSample } from './helpers/build-set'
 
 /** Real sample header bytes, then silent audio of the given size. */
 function withAudio(header: Uint8Array, audioLength: number): Uint8Array {
@@ -109,5 +110,42 @@ describe('sampleProblem', () => {
     reader.seek(100)
     expect(() => readSample(reader)).toThrow(SetFormatError)
     expect(() => readSample(reader)).toThrow('No valid sample at offset 100: byte R+1')
+  })
+})
+
+describe('1.10 samples', () => {
+  const noPool = new Map()
+  const sample = (fields: Partial<FakeSample>): FakeSample => ({
+    name: 'MS000003',
+    rootNote: 66,
+    rate: 16000,
+    channels: 1,
+    audio: new Int16Array(5),
+    ...fields,
+  })
+
+  test('the name is as long as R+1 says; bytes after it are leftovers', () => {
+    // Like a real 1.10 sample: R+1 is 8 and the field goes on with spaces.
+    const bytes = buildSample(sample({ nameLeftovers: '        ' }), '1.10')
+    expect(bytes[1]).toBe(8)
+    const read = readSample(new ByteReader(bytes), noPool, 'v1.10')
+    expect(read.name).toBe('MS000003')
+    expect(read.sampleRate).toBe(16000)
+    expect(read.frames).toBe(5)
+    expect(read.audioOffset).toBe(97)
+  })
+
+  test('R+1 = 0x20 means a null-padded name, as in later versions', () => {
+    const bytes = buildSample(sample({ name: 'NewSample_0000', nameStyle: 'null-padded' }), '1.10')
+    expect(readSample(new ByteReader(bytes), noPool, 'v1.10').name).toBe('NewSample_0000')
+  })
+
+  test("each layout rejects the other's samples", () => {
+    const old = new ByteReader(buildSample(sample({}), '1.10'))
+    expect(sampleProblem(old, 0)).toBe('byte R+1 is 0x8, not 0x20')
+    const padded = new ByteReader(buildSample(sample({ nameStyle: 'null-padded' }), '1.10'))
+    expect(sampleProblem(padded, 0)).toBe('the two sample-rate fields disagree (16000 and 0)')
+    const modern = new ByteReader(buildSample(sample({}), '1.3.1'))
+    expect(sampleProblem(modern, 0, noPool, 'v1.10')).toBe('R+37 is 16000, not 0 as in 1.10')
   })
 })

@@ -72,7 +72,7 @@ describe('readFileHeader', () => {
       instruments: [{ name: '-', samples: [tone('a', 0, [1])] }],
     })
     expect(() => readFileHeader(new ByteReader(bytes))).toThrow(
-      `Version "1.5.0" isn't supported (only 1.2.x to 1.4.x)`,
+      `Version "1.5.0" isn't supported (only 1.10 and 1.2.x to 1.4.x)`,
     )
   })
 

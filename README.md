@@ -1,6 +1,6 @@
 # parse-org-set
 
-Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` files as WAV files. Works with sets saved by versions 1.2.x to 1.4.x of the app.
+Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` files as WAV files. Works with sets saved by versions 1.10 and 1.2.x to 1.4.x of the app.
 
 ## Usage
 
@@ -70,7 +70,7 @@ sample isn't decoded.
 | ---------------- | ------ | ----------------------------------------------------------------------------- |
 | Title            | 32 B   | Null-padded `Music Studio music` (some files write `Music`)                   |
 | Version length   | uint32 | Length of the version text                                                    |
-| Version          | text   | `\r1.3.1\r` in 1.2.x and 1.3.x; `\r1.4.9` (no trailing `\r`) in 1.4.x         |
+| Version          | text   | `\r1.3.1\r` in 1.10 to 1.3.x; `\r1.4.9` (no trailing `\r`) in 1.4.x           |
 | (unknown)        | 16 B   | Starts with `ff ff`                                                           |
 | Text field       | uint32 | Number of characters that follow: 1 byte each before 1.4, 2 bytes each in 1.4 |
 | (unknown)        | 134 B  |                                                                               |
@@ -132,21 +132,21 @@ A layer belongs to the instrument before it.
 
 ### Sample (97 bytes, then the audio unless it's in the pool)
 
-| Offset | Type   | Meaning                                                                          |
-| ------ | ------ | -------------------------------------------------------------------------------- |
-| R+0    | uint8  | Root note, as a MIDI note number (60 = middle C)                                 |
-| R+1    | uint8  | Always `0x20`                                                                    |
-| R+2    | 31 B   | Name, UTF-8, null-padded (can fill all 31 bytes)                                 |
-| R+33   | uint16 | Sample rate, low 16 bits only                                                    |
-| R+35   | uint8  | Bits per sample (always 16)                                                      |
-| R+36   | uint8  | Channels (1 or 2)                                                                |
-| R+37   | uint32 | Sample rate, full value (can exceed 65,535)                                      |
-| R+41   | uint32 | Pool reference: 0 = the audio follows at R+97; N = the audio is pool entry N − 1 |
-| R+45   | uint32 | Frame count                                                                      |
-| R+69   | uint32 | Loop mode (values 0–3 seen)                                                      |
-| R+73   | uint32 | Loop start frame                                                                 |
-| R+77   | uint32 | Loop end frame (always at most frames − 1)                                       |
-| R+97   | bytes  | Audio: 16-bit signed PCM, interleaved if stereo, `frames × channels × 2` bytes   |
+| Offset | Type   | Meaning                                                                                       |
+| ------ | ------ | --------------------------------------------------------------------------------------------- |
+| R+0    | uint8  | Root note, as a MIDI note number (60 = middle C)                                              |
+| R+1    | uint8  | `0x20`. In 1.10: the name's length in bytes, or `0x20` for a null-padded name                 |
+| R+2    | 31 B   | Name, UTF-8, null-padded (can fill all 31 bytes); in 1.10 bytes past the length are leftovers |
+| R+33   | uint16 | Sample rate, low 16 bits only                                                                 |
+| R+35   | uint8  | Bits per sample (always 16)                                                                   |
+| R+36   | uint8  | Channels (1 or 2)                                                                             |
+| R+37   | uint32 | Sample rate, full value (can exceed 65,535). Always 0 in 1.10, which uses R+33                |
+| R+41   | uint32 | Pool reference: 0 = the audio follows at R+97; N = the audio is pool entry N − 1              |
+| R+45   | uint32 | Frame count                                                                                   |
+| R+69   | uint32 | Loop mode (values 0–3 seen)                                                                   |
+| R+73   | uint32 | Loop start frame                                                                              |
+| R+77   | uint32 | Loop end frame (always at most frames − 1)                                                    |
+| R+97   | bytes  | Audio: 16-bit signed PCM, interleaved if stereo, `frames × channels × 2` bytes                |
 
 The next sample (or header) starts right after the audio, or right after the 97-byte header if
 the audio is in the pool.
