@@ -39,7 +39,7 @@ export interface FileHeader {
  * directly by one instrument, exactly as it would appear inside a .Set. Its
  * version is in the instrument header's text ("Oud\r1.10\r").
  *
- * Layout (see the README's Layouts section):
+ * Layout (see docs/format.md):
  *   0   title, 32 bytes ("Music Studio music", any case)
  *   32  uint32 length, then the version text ("\r1.3.1\r" or "\r1.4.9")
  *   then ff ff and 14 bytes, a text field, 134 bytes, the sample pool,

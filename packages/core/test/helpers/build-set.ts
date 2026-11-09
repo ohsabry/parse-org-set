@@ -1,7 +1,7 @@
 /**
- * Test helper: builds a small fake .Set file in memory, following the
- * Layouts section of README.md. Anything marked GUESS isn't known from real
- * files; the builder fills it with something harmless (usually zeros).
+ * Test helper: builds a small fake .Set file in memory, following
+ * docs/format.md. Anything marked GUESS isn't known from real files; the
+ * builder fills it with something harmless (usually zeros).
  */
 
 export interface FakeLoop {

@@ -2,7 +2,7 @@ import type { ByteReader } from './reader'
 import type { Envelope, InstrumentKind } from './types'
 
 // Offsets inside an instrument header's settings, counted from the end of its
-// text (name + version). See the README's Layouts section.
+// text (name + version). See docs/format.md.
 const KIND_OFFSET = 124
 const KINDS: Record<number, InstrumentKind> = { 0: 'melodic', 1: 'drum', 2: 'audio' }
 
