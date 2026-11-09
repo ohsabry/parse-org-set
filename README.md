@@ -4,10 +4,19 @@ Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` and `.Instrument` f
 
 ## Usage
 
-Requires [Bun](https://bun.sh). Run it straight from npm:
+Requires [Bun](https://bun.sh). Install it once from npm:
 
-    bunx @parse-org-set/cli inspect "my set.Set"
-    bunx @parse-org-set/cli extract "my set.Set" [folder] [--simple] [--ascii]
+    bun add -g @parse-org-set/cli
+
+Then, from any folder:
+
+    parse-org-set inspect "my set.Set"
+    parse-org-set extract "my set.Set" [folder] [--simple] [--ascii]
+
+If your shell can't find `parse-org-set`, add `~/.bun/bin` to your `PATH`. To run it once
+without installing:
+
+    bunx -p @parse-org-set/cli parse-org-set inspect "my set.Set"
 
 Or clone the repo and run it from there, with paths relative to the repo folder:
 
