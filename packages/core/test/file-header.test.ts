@@ -98,7 +98,7 @@ describe('readFileHeader on things that are not .Set files', () => {
   test('rejects a different title', () => {
     const png = new Uint8Array(64)
     png.set([0x89, 0x50, 0x4e, 0x47])
-    expect(() => readFileHeader(new ByteReader(png))).toThrow('Not a .Set file')
+    expect(() => readFileHeader(new ByteReader(png))).toThrow('Not a .Set or .Instrument file')
   })
 
   test('rejects a file too short to hold a header', () => {
@@ -109,6 +109,8 @@ describe('readFileHeader on things that are not .Set files', () => {
 
   test('rejects a version length that runs past the end', () => {
     const bytes = FILE_STARTS.v131.slice(0, 40)
-    expect(() => readFileHeader(new ByteReader(bytes))).toThrow("Version text length 7 doesn't")
+    expect(() => readFileHeader(new ByteReader(bytes))).toThrow(
+      "Text length 7 at offset 32 doesn't",
+    )
   })
 })

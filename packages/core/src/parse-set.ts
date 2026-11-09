@@ -24,7 +24,7 @@ interface Group {
 }
 
 /**
- * Parses a .Set file, version 1.10 or 1.2.x to 1.4.x. Audio isn't copied: each
+ * Parses a .Set or .Instrument file, version 1.10 or 1.2.x to 1.4.x. Audio isn't copied: each
  * sample says where its audio is in `bytes`, either right after its header or
  * in the file's sample pool. Throws SetFormatError if the bytes don't fit.
  *
@@ -41,7 +41,7 @@ interface Group {
  */
 export function parseSet(bytes: Uint8Array): SetFile {
   const reader = new ByteReader(bytes)
-  const { version, firstInstrumentOffset, pool } = readFileHeader(reader)
+  const { fileType, version, firstInstrumentOffset, pool } = readFileHeader(reader)
   // Instrument texts end with the version: "Oud\r1.3.1\r" or "Oud\r1.4.9".
   const ending = new TextEncoder().encode(
     version.startsWith('1.4.') ? `\r${version}` : `\r${version}\r`,
@@ -71,6 +71,7 @@ export function parseSet(bytes: Uint8Array): SetFile {
     throw new SetFormatError('No samples found', firstInstrumentOffset)
   }
   return {
+    fileType,
     version,
     instruments: groupLayers(groups),
     poolEntries: pool.size,

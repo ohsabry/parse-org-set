@@ -3,7 +3,8 @@ import type { ByteReader } from './reader'
 import type { PoolEntry } from './types'
 import { startsWith } from './utils'
 
-const TITLE = 'music studio music'
+const SET_TITLE = 'music studio music'
+const INSTRUMENT_TITLE = 'music studio instrument'
 // Versions seen in real files: 1.10, 1.2.8, 1.3.0, 1.3.1 and 1.4.9.
 const SUPPORTED = /^1\.(10|[234]\.\d+)$/
 
@@ -18,6 +19,7 @@ const TEXT_FIELD_TO_POOL = 134
 const MAX_SEARCH = 1 << 20
 
 export interface FileHeader {
+  fileType: 'set' | 'instrument'
   /** For example '1.3.1'. */
   version: string
   /** Where the first instrument header starts. */
@@ -30,8 +32,12 @@ export interface FileHeader {
 
 /**
  * Reads the file header: title, version, the sample pool (if any), and where
- * the first instrument starts. Throws SetFormatError if it isn't a .Set file
- * or uses a version we don't support.
+ * the first instrument starts. Throws SetFormatError if it isn't a .Set or
+ * .Instrument file, or uses a version we don't support.
+ *
+ * An .Instrument file is a 32-byte title ("Music Studio Instrument") followed
+ * directly by one instrument, exactly as it would appear inside a .Set. Its
+ * version is in the instrument header's text ("Oud\r1.10\r").
  *
  * Layout (see the README's Layouts section):
  *   0   title, 32 bytes ("Music Studio music", any case)
@@ -45,22 +51,37 @@ export function readFileHeader(reader: ByteReader): FileHeader {
     throw new SetFormatError(`Too short to be a .Set file (${reader.length} bytes)`, 0)
   }
   reader.seek(0)
-  const title = reader.utf8(32)
-  if (title.toLowerCase() !== TITLE) {
-    throw new SetFormatError(`Not a .Set file: it starts with ${JSON.stringify(title)}`, 0)
+  const title = reader.utf8(32).toLowerCase()
+  if (title !== SET_TITLE && title !== INSTRUMENT_TITLE) {
+    throw new SetFormatError(
+      `Not a .Set or .Instrument file: it starts with ${JSON.stringify(title)}`,
+      0,
+    )
   }
 
   const textLength = reader.u32()
-  if (textLength > 64 || 36 + textLength > reader.length) {
-    throw new SetFormatError(`Version text length ${textLength} doesn't make sense`, 32)
+  // A .Set's version record is short; an instrument header also holds the name.
+  const maxLength = title === SET_TITLE ? 64 : 1024
+  if (textLength > maxLength || 36 + textLength > reader.length) {
+    throw new SetFormatError(`Text length ${textLength} at offset 32 doesn't make sense`, 32)
   }
-  const version = cleanVersion(reader.bytes(textLength))
-  if (!SUPPORTED.test(version)) {
-    throw new SetFormatError(
-      `Version ${JSON.stringify(version)} isn't supported (only 1.10 and 1.2.x to 1.4.x)`,
-      36,
-    )
+  const text = reader.bytes(textLength)
+
+  if (title === INSTRUMENT_TITLE) {
+    // "Oud\r1.10\r": the version is what follows the name's \r.
+    const version = new TextDecoder().decode(text).split('\r')[1] ?? ''
+    checkVersion(version)
+    return {
+      fileType: 'instrument',
+      version,
+      firstInstrumentOffset: 32,
+      instrumentCount: 1,
+      pool: new Map(),
+    }
   }
+
+  const version = cleanVersion(text)
+  checkVersion(version)
 
   // The text field: 1 byte per character before 1.4, 2 bytes from 1.4 on.
   const fieldAt = 36 + textLength + VERSION_TO_TEXT_FIELD
@@ -78,7 +99,16 @@ export function readFileHeader(reader: ByteReader): FileHeader {
 
   const pool = readPool(reader)
   const { firstInstrumentOffset, instrumentCount } = findInstruments(reader, textLength)
-  return { version, firstInstrumentOffset, instrumentCount, pool }
+  return { fileType: 'set', version, firstInstrumentOffset, instrumentCount, pool }
+}
+
+function checkVersion(version: string): void {
+  if (!SUPPORTED.test(version)) {
+    throw new SetFormatError(
+      `Version ${JSON.stringify(version)} isn't supported (only 1.10 and 1.2.x to 1.4.x)`,
+      36,
+    )
+  }
 }
 
 /** "\r1.3.1\r" → "1.3.1". */

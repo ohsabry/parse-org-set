@@ -1,6 +1,7 @@
 export { SetFormatError } from './errors/set-format-error'
 export {
   defaultOutputFolder,
+  instrumentLabel,
   planExtraction,
   type ExtractionIndex,
   type ExtractionPlan,

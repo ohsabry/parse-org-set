@@ -44,6 +44,7 @@ describe('safeName', () => {
 
 test('ascii mode: every path is plain ASCII', () => {
   const arabic: SetFile = {
+    fileType: 'set',
     version: '1.3.1',
     trailerOffset: 0,
     poolEntries: 0,
@@ -76,6 +77,7 @@ test('ascii mode: every path is plain ASCII', () => {
 test('defaultOutputFolder', () => {
   expect(defaultOutputFolder('سيت الأصوات2023.Set')).toBe('سيت_الأصوات2023_samples')
   expect(defaultOutputFolder('pack.set')).toBe('pack_samples')
+  expect(defaultOutputFolder('Accordion A MT.Instrument')).toBe('Accordion_A_MT_samples')
   expect(defaultOutputFolder('no extension')).toBe('no_extension_samples')
 })
 
@@ -95,6 +97,7 @@ function sample(name: string, rootNote: number, frames: number): Sample {
 }
 
 const set: SetFile = {
+  fileType: 'set',
   version: '1.3.1',
   trailerOffset: 0,
   poolEntries: 0,

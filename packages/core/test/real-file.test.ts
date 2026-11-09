@@ -22,9 +22,6 @@ function real(): { bytes: Uint8Array; set: SetFile; samples: Sample[] } {
   return loaded
 }
 
-const median = (values: number[]): number =>
-  [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0
-
 describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
   beforeAll(async () => {
     const bytes = await Bun.file(path ?? '').bytes()
@@ -70,29 +67,30 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
     }
   })
 
-  test('audio starts right after 16 zero bytes, and starts smoothly', () => {
-    // Bytes R+81 … R+96 are always zero in real 1.3.x files, so the audio can't
-    // start earlier. And if it started at the wrong byte, pairs of bytes would
-    // be split across samples and neighbouring values would jump wildly: real
-    // audio moves in small steps (a median of 5 to 7 out of ±32,768).
+  test('audio starts right after 16 zero bytes, at the right byte', () => {
+    // Bytes R+81 … R+96 are always zero in real files, so the audio can't
+    // start earlier. And if it started one byte off, each 16-bit value would be
+    // made of halves of two neighbours and jump around far more. Real files are
+    // 4 to 19 times rougher read one byte late. This is checked over the whole
+    // file, because single samples can go either way: noise and silence by
+    // chance, and 8-bit audio stored as 16-bit (every low byte 0) always looks
+    // smoother shifted, since its values shrink 256 times.
     const { bytes, samples } = real()
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
     const notZeroBefore: string[] = []
-    const firstSteps: number[] = []
+    let aligned = 0
+    let shifted = 0
     for (const s of samples) {
       // Pooled audio sits after a pool entry's ID and size, not after a header.
       const afterHeader = s.poolId === undefined
       if (afterHeader && bytes.subarray(s.audioOffset - 16, s.audioOffset).some((b) => b !== 0)) {
         notZeroBefore.push(s.name)
       }
-      if (s.channels === 1 && s.frames >= 2) {
-        const first = view.getInt16(s.audioOffset, true)
-        const second = view.getInt16(s.audioOffset + 2, true)
-        firstSteps.push(Math.abs(first - second))
-      }
+      aligned += roughness(view, s, 0)
+      shifted += roughness(view, s, 1)
     }
     expect(notZeroBefore).toEqual([])
-    expect(median(firstSteps)).toBeLessThan(1000)
+    expect(shifted).toBeGreaterThan(2 * aligned)
   })
 
   test('loop points lie inside each sample', () => {
@@ -110,8 +108,9 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
   test('instrument types fit the names: Shots is a drum kit, "(Audio)" ones are audio', () => {
     // The names were written by the sound designer; the type byte by the app.
     const { set } = real()
-    // In the one 1.10 set seen, Shots holds only the metronome and is typed melodic.
-    if (set.version !== '1.10') {
+    // .Instrument files have no Shots. In the one 1.10 set seen, Shots holds
+    // only the metronome and is typed melodic.
+    if (set.fileType === 'set' && set.version !== '1.10') {
       expect(set.instruments[0]?.kind).toBe('drum')
     }
     const notAudio: string[] = []
@@ -166,3 +165,24 @@ describe.skipIf(path === undefined)(`real file ${path ?? ''}`, () => {
     expect(reader.utf8(reader.u32()).startsWith('\r')).toBe(true)
   })
 })
+
+/**
+ * The sum of the jumps between neighbouring values of the first channel, over
+ * up to 20,000 frames, reading the audio `shift` bytes after where it starts.
+ */
+function roughness(view: DataView, s: Sample, shift: number): number {
+  if (s.frames < 2) {
+    return 0
+  }
+  const stride = s.channels * 2
+  // Stop a frame early so a shifted read never runs past the audio.
+  const frames = Math.min(s.frames - 1, 20_000)
+  let total = 0
+  let previous = view.getInt16(s.audioOffset + shift, true)
+  for (let i = 1; i < frames; i++) {
+    const value = view.getInt16(s.audioOffset + shift + i * stride, true)
+    total += Math.abs(value - previous)
+    previous = value
+  }
+  return total
+}

@@ -1,12 +1,14 @@
 /** A parsed .Set file. Audio isn't copied: samples point into the original bytes. */
 export interface SetFile {
+  /** 'set' for a .Set; 'instrument' for an .Instrument, which holds a single instrument. */
+  fileType: 'set' | 'instrument'
   /** For example '1.3.1'. */
   version: string
-  /** The first one is the Shots group. */
+  /** In a .Set, the first one is the Shots group. */
   instruments: Instrument[]
   /** How many entries the file's sample pool has (0 if it has none). */
   poolEntries: number
-  /** Where the undecoded trailer after the last sample starts. */
+  /** Where the undecoded trailer after the last sample starts (the file's length if it has none). */
   trailerOffset: number
 }
 

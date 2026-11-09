@@ -56,7 +56,7 @@ describe('parse-org-set inspect', () => {
   test('a file that is not a .Set', () => {
     const { code, stderr } = run('inspect', writeTemp('photo.Set', new Uint8Array(100).fill(7)))
     expect(code).toBe(1)
-    expect(stderr).toContain('Not a .Set file')
+    expect(stderr).toContain('Not a .Set or .Instrument file')
   })
 
   test('a version it has never seen', () => {
@@ -80,8 +80,8 @@ describe('parse-org-set inspect', () => {
     for (const args of [[], ['inspect'], ['convert', 'x.Set'], ['inspect', 'a.Set', 'b.Set']]) {
       const { code, stderr } = run(...args)
       expect(code).toBe(1)
-      expect(stderr).toContain('parse-org-set inspect <file.Set>')
-      expect(stderr).toContain('parse-org-set extract <file.Set> [folder]')
+      expect(stderr).toContain('parse-org-set inspect <file.Set or .Instrument>')
+      expect(stderr).toContain('parse-org-set extract <file.Set or .Instrument> [folder]')
     }
   })
 })

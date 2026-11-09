@@ -1,7 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 
-import { parseSet } from '../src/index'
-import { buildSet, type FakeInstrument, type FakeSample } from './helpers/build-set'
+import { parseSet, planExtraction } from '../src/index'
+import {
+  buildInstrumentFile,
+  buildSet,
+  type FakeInstrument,
+  type FakeSample,
+} from './helpers/build-set'
 
 const mono = (name: string, rootNote: number, frames: number): FakeSample => ({
   name,
@@ -209,5 +214,59 @@ describe('parseSet on 1.10 files', () => {
       'Strings (Stereo): NewSample_0000 48000 Hz 6',
       'Strings (Stereo): STR E3 16000 Hz 3',
     ])
+  })
+})
+
+describe('parseSet on .Instrument files', () => {
+  const accordion: FakeInstrument = {
+    name: 'Accordion A MT',
+    samples: [
+      { ...mono('AC1C4', 60, 5), nameLeftovers: '  ' },
+      { ...mono('AC1E4', 64, 4), rate: 32000 },
+    ],
+    settingsLength: 133,
+  }
+
+  // Name leftovers only exist in 1.10, so other versions use these samples.
+  const plain: FakeInstrument = {
+    ...accordion,
+    samples: [mono('AC1C4', 60, 5), mono('AC1E4', 64, 4)],
+  }
+
+  test('a 1.10 file holds one instrument and nothing after it', () => {
+    const bytes = buildInstrumentFile(accordion, '1.10')
+    const set = parseSet(bytes)
+    expect(set.fileType).toBe('instrument')
+    expect(set.version).toBe('1.10')
+    expect(set.instruments.map((i) => i.name)).toEqual(['Accordion A MT'])
+    const seen: string[] = []
+    for (const sample of set.instruments[0]?.samples ?? []) {
+      seen.push(`${sample.name} ${sample.sampleRate}`)
+    }
+    expect(seen).toEqual(['AC1C4 44100', 'AC1E4 32000'])
+    expect(set.trailerOffset).toBe(bytes.length)
+  })
+
+  test('a 1.2.8 file reads the same way, with later-style samples', () => {
+    const set = parseSet(buildInstrumentFile(plain, '1.2.8'))
+    expect(set.version).toBe('1.2.8')
+    expect(set.instruments[0]?.samples.map((s) => s.name)).toEqual(['AC1C4', 'AC1E4'])
+  })
+
+  test('its one instrument is extracted under its own name, not as Shots', () => {
+    const plan = planExtraction(
+      'Accordion A MT.Instrument',
+      parseSet(buildInstrumentFile(accordion)),
+    )
+    expect(plan.files.map((f) => f.path)).toEqual([
+      '01_Accordion_A_MT/001_C4_AC1C4.wav',
+      '01_Accordion_A_MT/002_E4_AC1E4.wav',
+    ])
+  })
+
+  test('rejects an unsupported version', () => {
+    expect(() => parseSet(buildInstrumentFile(plain, '1.5.0'))).toThrow(
+      `Version "1.5.0" isn't supported`,
+    )
   })
 })

@@ -75,6 +75,24 @@ export function buildSet(set: FakeSet): Uint8Array {
   return concat(chunks)
 }
 
+/**
+ * A fake .Instrument file: the 32-byte title, then one instrument exactly as
+ * in a .Set. 1.10 files have 4 unknown bytes at offset 28 (`40 5c 4f 06` in
+ * every real one); 1.2.8 files have zeros there.
+ */
+export function buildInstrumentFile(instrument: FakeInstrument, version = '1.10'): Uint8Array {
+  const title = new Uint8Array(32)
+  title.set(encoder.encode('Music Studio Instrument'))
+  if (version === '1.10') {
+    title.set([0x40, 0x5c, 0x4f, 0x06], 28)
+  }
+  const chunks = [title, instrumentHeader(instrument, version)]
+  for (const sample of instrument.samples) {
+    chunks.push(buildSample(sample, version))
+  }
+  return concat(chunks)
+}
+
 /** 1.4.x writes the version as "\r1.4.9"; older versions as "\r1.3.1\r". */
 function versionText(version: string): string {
   return version.startsWith('1.4.') ? `\r${version}` : `\r${version}\r`
@@ -173,6 +191,9 @@ export function buildSample(sample: FakeSample, version = '1.3.1'): Uint8Array {
   const leftovers = encoder.encode(sample.nameLeftovers ?? '')
   if (name.length + leftovers.length > NAME_FIELD_LENGTH) {
     throw new Error(`Sample name is ${name.length} bytes; the field holds ${NAME_FIELD_LENGTH}`)
+  }
+  if (!old && leftovers.length > 0) {
+    throw new Error('Name leftovers only exist in 1.10; later versions null-pad the name')
   }
   if (old && sample.rate > 0xffff) {
     throw new Error(`1.10 stores only a 16-bit rate, so ${sample.rate} Hz doesn't fit`)

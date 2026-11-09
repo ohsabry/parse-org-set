@@ -38,7 +38,7 @@ export function planSimpleExtraction(
   const exported: Sample[] = []
 
   for (const [i, instrument] of set.instruments.entries()) {
-    const label = `${pad(i + 1, digits)}_${nameFor(instrumentLabel(i, instrument.name), options)}`
+    const label = `${pad(i + 1, digits)}_${nameFor(instrumentLabel(set, i), options)}`
 
     if (instrument.kind === 'audio') {
       continue

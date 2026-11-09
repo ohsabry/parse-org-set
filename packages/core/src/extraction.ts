@@ -128,22 +128,26 @@ export function sampleFileName(
   return `${pad(number, digits)}_${noteLabel(sample.rootNote)}_${nameFor(sample.name, options)}.wav`
 }
 
-/** The first instrument's header is named "-" (or "Constant" in 1.4.9); we call it Shots. */
-export function instrumentLabel(position: number, name: string): string {
-  return position === 0 ? 'Shots' : name
+/**
+ * The name to show for an instrument. A .Set's first instrument is named "-"
+ * (or "Constant" in 1.4.9); we call it Shots. An .Instrument file has no Shots.
+ */
+export function instrumentLabel(set: SetFile, position: number): string {
+  const name = set.instruments[position]?.name ?? ''
+  return set.fileType === 'set' && position === 0 ? 'Shots' : name
 }
 
 export function pad(n: number, digits: number): string {
   return String(n).padStart(digits, '0')
 }
 
-/** "سيت الأصوات2023.Set" → "سيت_الأصوات2023_samples". */
+/** "سيت الأصوات2023.Set" → "سيت_الأصوات2023_samples"; "Oud.Instrument" → "Oud_samples". */
 export function defaultOutputFolder(
   setFileName: string,
   options: NameOptions = {},
   suffix = 'samples',
 ): string {
-  const withoutExtension = setFileName.replace(/\.set$/i, '')
+  const withoutExtension = setFileName.replace(/\.(set|instrument)$/i, '')
   return `${nameFor(withoutExtension, options)}_${suffix}`
 }
 
@@ -162,7 +166,7 @@ export function planExtraction(
   const folderDigits = Math.max(2, String(set.instruments.length).length)
 
   for (const [i, instrument] of set.instruments.entries()) {
-    const folder = `${pad(i + 1, folderDigits)}_${nameFor(instrumentLabel(i, instrument.name), options)}`
+    const folder = `${pad(i + 1, folderDigits)}_${nameFor(instrumentLabel(set, i), options)}`
     const entry: IndexInstrument = { folder, name: instrument.name, samples: [], layers: [] }
     entry.samples = planSamples(folder, instrument.samples, files, options)
 

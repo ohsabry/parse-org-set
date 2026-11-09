@@ -15,8 +15,8 @@ import { formatSummary } from './summary'
 import { count } from './utils'
 
 const USAGE = `Usage:
-  parse-org-set inspect <file.Set>
-  parse-org-set extract <file.Set> [folder] [--ascii] [--simple]
+  parse-org-set inspect <file.Set or .Instrument>
+  parse-org-set extract <file.Set or .Instrument> [folder] [--ascii] [--simple]
 
   folder    defaults to <set name>_samples (or <set name>_simple)
   --ascii   use only ASCII in folder and file names (Arabic uses the Arabic chat alphabet)
@@ -84,8 +84,8 @@ async function main(args: string[]): Promise<number> {
 }
 
 /**
- * Reads and parses a .Set file. Prints a one-line error and returns undefined
- * if the file is missing, unreadable or not a supported .Set.
+ * Reads and parses a .Set or .Instrument file. Prints a one-line error and returns undefined
+ * if the file is missing, unreadable or not a supported .Set or .Instrument.
  */
 async function loadSet(
   path: string,

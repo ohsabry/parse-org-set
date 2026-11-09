@@ -1,4 +1,10 @@
-import { describeSpacing, noteLabel, type Sample, type SetFile } from '@parse-org-set/core'
+import {
+  describeSpacing,
+  instrumentLabel,
+  noteLabel,
+  type Sample,
+  type SetFile,
+} from '@parse-org-set/core'
 
 import { count } from './utils'
 
@@ -19,8 +25,7 @@ export function formatSummary(fileName: string, set: SetFile): string {
     const instrumentSeconds = totalSeconds(all)
     sampleCount += all.length
     seconds += instrumentSeconds
-    // The first group's header is named "-" (or "Constant"); we call it Shots.
-    const name = i === 0 ? 'Shots' : instrument.name
+    const name = instrumentLabel(set, i)
     const layers = instrument.layers.length
     table.push([
       String(i + 1),

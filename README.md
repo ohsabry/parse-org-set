@@ -1,6 +1,6 @@
 # parse-org-set
 
-Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` files as WAV files. Works with sets saved by versions 1.10 and 1.2.x to 1.4.x of the app.
+Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` and `.Instrument` files as WAV files. Works with files saved by versions 1.10 and 1.2.x to 1.4.x of the app.
 
 ## Usage
 
@@ -16,6 +16,8 @@ to your `PATH`). Then, from any folder:
 
     parse-org-set inspect "my set.Set"
     parse-org-set extract "my set.Set" [folder] [--simple] [--ascii]
+
+Both commands also take a single-instrument `.Instrument` file in place of a `.Set`.
 
 Without linking, `bun run inspect …` and `bun run extract …` work from the repo folder, with
 paths relative to it.
@@ -63,6 +65,21 @@ Every instrument starts with an instrument header, followed by its samples. An i
 have extra **layers** (for example soft playing, growl, or a breath noise), each with a short
 header and its own samples. We call the first instrument **Shots**. The trailer after the last
 sample isn't decoded.
+
+### .Instrument files
+
+An `.Instrument` file holds a single instrument, laid out exactly as inside a `.Set`:
+
+    [title][instrument header][samples…]
+
+| Part       | Type   | Meaning                                                                  |
+| ---------- | ------ | ------------------------------------------------------------------------ |
+| Title      | 28 B   | Null-padded `Music Studio Instrument`                                    |
+| (unknown)  | 4 B    | `40 5c 4f 06` in 1.10 files, zeros in 1.2.8 ones                         |
+| Instrument | varies | An instrument header (below) then its samples, up to the end of the file |
+
+There's no file header, sample pool or trailer: the version is the one in the instrument
+header's text (`Oud\r1.10\r`), and the last sample's audio ends the file.
 
 ### File header
 

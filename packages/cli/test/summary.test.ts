@@ -20,6 +20,7 @@ function sample(rootNote: number, frames: number, sampleRate: number): Sample {
 }
 
 const set: SetFile = {
+  fileType: 'set',
   version: '1.3.1',
   trailerOffset: 0,
   poolEntries: 0,
