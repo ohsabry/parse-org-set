@@ -1,12 +1,37 @@
 {
-  "name": "@parse-org-set/cli",
-  "version": "0.0.0",
+  "name": "parse-org-set",
+  "version": "0.1.0",
+  "description": "Extract the sounds in ORG 24 .Set and .Instrument files as WAV files",
   "license": "MIT",
   "type": "module",
-  "bin": {
-    "parse-org-set": "src/main.ts"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ohsabry/parse-org-set.git",
+    "directory": "packages/cli"
   },
-  "dependencies": {
+  "keywords": [
+    "org24",
+    "music-studio",
+    "sofeh",
+    "set",
+    "sampler",
+    "wav",
+    "digitakt",
+    "arabic"
+  ],
+  "bin": {
+    "parse-org-set": "dist/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun build src/main.ts --target bun --outfile dist/main.js && cp ../../README.md ../../LICENSE .",
+    "prepublishOnly": "bun run build"
+  },
+  "devDependencies": {
     "@parse-org-set/core": "workspace:*"
   }
 }

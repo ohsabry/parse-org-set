@@ -4,23 +4,23 @@ Extract the sounds inside [ORG 24](https://sofeh.com) `.Set` and `.Instrument` f
 
 ## Usage
 
-Requires [Bun](https://bun.sh). Run this once:
+Requires [Bun](https://bun.sh). Run it straight from npm:
+
+    bunx parse-org-set inspect "my set.Set"
+    bunx parse-org-set extract "my set.Set" [folder] [--simple] [--ascii]
+
+Or clone the repo and run it from there, with paths relative to the repo folder:
 
     git clone https://github.com/ohsabry/parse-org-set.git
     cd parse-org-set
     bun install
-    cd packages/cli && bun link
-
-That adds a `parse-org-set` command to `~/.bun/bin` (if your shell can't find it, add that folder
-to your `PATH`). Then, from any folder:
-
-    parse-org-set inspect "my set.Set"
-    parse-org-set extract "my set.Set" [folder] [--simple] [--ascii]
+    bun run inspect "my set.Set"
+    bun run extract "my set.Set" [folder] [--simple] [--ascii]
 
 Both commands also take a single-instrument `.Instrument` file in place of a `.Set`.
 
-Without linking, `bun run inspect …` and `bun run extract …` work from the repo folder, with
-paths relative to it.
+Would you rather not install Bun? If a precompiled binary (through Homebrew or similar) would
+help, [open an issue](https://github.com/ohsabry/parse-org-set/issues) and I'm happy to make one.
 
 **`inspect`** prints a summary: the version, the number of instruments and samples, and one row
 per instrument with its sample count, note range, how its notes are spaced, its total length and

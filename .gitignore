@@ -17,6 +17,9 @@ orgset_starter.zip
 
 node_modules/
 dist/
+# Copied in by the CLI's build so npm publishes them; the originals are at the root
+packages/cli/README.md
+packages/cli/LICENSE
 .DS_Store
 
 # Project notes, kept local until the format is stable
