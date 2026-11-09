@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ohsabry.github.io/parse-org-set/sitemap.xml

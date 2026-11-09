@@ -1,0 +1,118 @@
+/* Plain on purpose: system fonts, one column, native controls. */
+
+:root {
+  color-scheme: light dark;
+  --background: #fbfaf7;
+  --text: #1b1b1b;
+  --muted: #666;
+  --link: #0645ad;
+  --line: #b5b5b5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #151515;
+    --text: #e6e4df;
+    --muted: #9b9b9b;
+    --link: #8ab4f8;
+    --line: #555;
+  }
+}
+
+/* Each piece of text is wrapped in its language (data-lang). Only English
+   exists for now; another language would go beside it, with a rule like this
+   one so only the page's current language shows. */
+html:lang(en) [data-lang]:not([data-lang='en']) {
+  display: none;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font:
+    17px/1.55 system-ui,
+    sans-serif;
+}
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+a {
+  color: var(--link);
+}
+
+/* The whole box is a <label> for the hidden file input, so clicking anywhere opens the picker. */
+.drop {
+  display: block;
+  margin: 1.5rem 0;
+  padding: 2rem 1rem;
+  border: 2px dashed var(--line);
+  text-align: center;
+  cursor: pointer;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--text);
+  color: var(--text);
+  font: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Keyboard users always see where they are. */
+:focus-visible,
+.drop:focus-within {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+/* Hidden but still reachable by keyboard and screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Long names (some sets have very long ones) wrap instead of widening the page. */
+main {
+  overflow-wrap: anywhere;
+}
+
+footer p {
+  margin: 0.25rem 0;
+}

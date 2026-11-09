@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en-CA" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>parse-org-set: extract the audio samples in ORG 24 .Set files</title>
+    <meta
+      name="description"
+      content="Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument. Runs in your browser; nothing is uploaded."
+    />
+    <link rel="canonical" href="https://ohsabry.github.io/parse-org-set/" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="light dark" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ohsabry.github.io/parse-org-set/" />
+    <meta property="og:title" content="parse-org-set" />
+    <meta
+      property="og:description"
+      content="Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument. Runs in your browser; nothing is uploaded."
+    />
+    <meta property="og:locale" content="en_CA" />
+    <!-- A plain square as the icon, inline so it costs no request. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%231b1b1b'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%23fbfaf7'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./src/style.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "parse-org-set",
+        "url": "https://ohsabry.github.io/parse-org-set/",
+        "description": "Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any",
+        "inLanguage": ["en-CA"],
+        "isAccessibleForFree": true,
+        "license": "https://opensource.org/licenses/MIT",
+        "author": { "@type": "Person", "name": "ohsabry", "url": "https://github.com/ohsabry" }
+      }
+    </script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>parse-org-set</h1>
+      </header>
+
+      <!-- Text is wrapped per language (data-lang); the CSS shows the current one. English only for now. -->
+      <p>
+        <span data-lang="en" lang="en"
+          >Extract the audio samples inside <a href="https://sofeh.com">ORG 24</a> .Set and
+          .Instrument files, as WAV files organized by instrument.</span
+        >
+      </p>
+      <p>
+        <span data-lang="en" lang="en"
+          >Runs entirely in your browser: your file stays on your computer, so nothing is
+          uploaded.</span
+        >
+      </p>
+
+      <!-- The whole box is the file input's label, so a click or tap anywhere opens the picker. -->
+      <label class="drop">
+        <span data-lang="en" lang="en">Drop a file here, or</span>
+        <span class="button">
+          <span data-lang="en" lang="en">Choose file</span>
+        </span>
+        <input type="file" accept=".Set,.set,.Instrument,.instrument" class="visually-hidden" />
+      </label>
+
+      <footer>
+        <p>
+          <span data-lang="en" lang="en"
+            >Made by <a href="https://github.com/ohsabry">@ohsabry</a> ·
+            <a href="https://github.com/ohsabry/parse-org-set">Source on GitHub</a> · MIT</span
+          >
+        </p>
+        <p>
+          <span data-lang="en" lang="en"
+            >Not affiliated with Sofeh Sunrise or ORG 24. The format was worked out from a handful
+            of files, so check your sounds.</span
+          >
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
