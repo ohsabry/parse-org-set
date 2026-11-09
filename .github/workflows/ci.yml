@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      # Fails if bun.lock doesn't match package.json.
+      - run: bun install --frozen-lockfile
+
+      # Type checks, ESLint, the Prettier check and the tests. The real-file
+      # smoke tests skip themselves: no .Set files are ever in the repo.
+      - run: bun run verify
+
+      # The bundle that gets published to npm.
+      - run: bun run --cwd packages/cli build
