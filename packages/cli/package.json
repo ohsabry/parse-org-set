@@ -1,6 +1,6 @@
 {
   "name": "@parse-org-set/cli",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Extract the sounds in ORG 24 .Set and .Instrument files as WAV files",
   "license": "MIT",
   "type": "module",
