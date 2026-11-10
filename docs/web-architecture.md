@@ -88,7 +88,7 @@ The zips come out byte for byte the same as the CLI's folders: every path, every
 `index.json`. The browser tests check that on the fake files in all three engines; real sets
 (every version, up to 700 MB) were checked the same way by hand.
 
-## Building and the dev server
+## Building, the dev server and deploying
 
 Bun turns the TypeScript into plain JavaScript (removing the types, bundling the imports into one
 file) before any browser sees it, in the dev server and in the build alike.
@@ -106,6 +106,10 @@ file) before any browser sees it, in the dev server and in the build alike.
   3. It adds the security policy below, and copies `robots.txt` and `sitemap.xml`.
   4. File references are relative (`./chunk-….js`), so the site works from a subfolder like
      `ohsabry.github.io/parse-org-set/`.
+- **Deploying:** every push to `main` that passes all the checks (`verify` and the browser tests)
+  builds the site and publishes it to GitHub Pages, at
+  [ohsabry.github.io/parse-org-set](https://ohsabry.github.io/parse-org-set/). That's the `deploy`
+  job in `.github/workflows/ci.yml`; a failing check means nothing is published.
 
 ## The security policy
 

@@ -4,7 +4,13 @@ Turns the sounds inside [ORG 24](https://sofeh.com) `.Set` and `.Instrument` fil
 you can load into any sampler or DAW. Reads files saved by versions 1.10 and 1.2.x to 1.4.x of
 the app.
 
-## Install
+## In your browser
+
+**[ohsabry.github.io/parse-org-set](https://ohsabry.github.io/parse-org-set/)**: open or drop a
+file, then download the samples as a zip. Nothing to install, and your files never leave your
+computer.
+
+## On the command line
 
 Requires [Bun](https://bun.sh).
 
