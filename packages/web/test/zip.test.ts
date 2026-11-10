@@ -7,7 +7,7 @@ import { parseSet, planExtraction, type ExtractionPlan } from '@parse-org-set/co
 import { unzipSync } from 'fflate'
 
 import { buildSet, type FakeSample } from '../../core/test/helpers/build-set'
-import { zipExtraction } from '../src/zip'
+import { zipExtraction, zipSize } from '../src/zip'
 
 const tone = (name: string, rootNote: number, channels: 1 | 2, values: number[]): FakeSample => ({
   name,
@@ -107,6 +107,13 @@ describe('zipExtraction', () => {
     }
     expect((flags.get('x_samples/03_إسترينج_🎼/001_E3_MS000001.wav') ?? 0) & 0x800).toBe(0x800)
     expect((flags.get('x_samples/01_Shots/001_C-1_Metronome.wav') ?? 0x800) & 0x800).toBe(0)
+  })
+
+  test('zipSize says exactly how big the zip is, and how many entries it holds', () => {
+    expect(zipSize(plan, folder)).toEqual({
+      entries: Object.keys(entries).length,
+      bytes: zip.length,
+    })
   })
 
   test('refuses, with a clear error, more files than a plain zip can hold', () => {

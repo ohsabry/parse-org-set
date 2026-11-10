@@ -48,7 +48,10 @@ export interface FileHeader {
  */
 export function readFileHeader(reader: ByteReader): FileHeader {
   if (reader.length < 36) {
-    throw new SetFormatError(`Too short to be a .Set file (${reader.length} bytes)`, 0)
+    throw new SetFormatError(
+      `Too short to be a .Set or .Instrument file (${reader.length} bytes)`,
+      0,
+    )
   }
   reader.seek(0)
   const title = reader.utf8(32).toLowerCase()

@@ -80,6 +80,35 @@
       <section id="result" hidden>
         <h2 id="file-name" dir="auto"></h2>
         <p id="overview"></p>
+
+        <fieldset class="options">
+          <legend class="visually-hidden">Download options</legend>
+          <label>
+            <input type="checkbox" name="simple" />
+            <span>
+              <span data-lang="en" lang="en"><strong>Fewer files</strong></span>
+              <span class="hint" data-lang="en" lang="en"
+                >One sound per instrument, plus every drum sound. Handy for small samplers like the
+                Digitakt.</span
+              >
+            </span>
+          </label>
+          <label>
+            <input type="checkbox" name="ascii" />
+            <span>
+              <span data-lang="en" lang="en"><strong>English letters in file names</strong></span>
+              <span class="hint" data-lang="en" lang="en"
+                >If your sampler or computer shows Arabic names as boxes or question marks, use
+                this. Arabic is spelled with English letters and numbers, like texting:
+                <bdi lang="ar">عود</bdi> → 3od, <bdi lang="ar">كمنجة</bdi> → kmnga.</span
+              >
+            </span>
+          </label>
+        </fieldset>
+
+        <p>
+          <button type="button" id="download" class="button"></button>
+        </p>
         <!-- On narrow screens the table scrolls sideways by itself, not the whole page.
              tabindex lets keyboard users focus it and scroll with the arrow keys. -->
         <div class="table-scroll" tabindex="0" role="region" aria-label="Instruments">

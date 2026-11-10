@@ -6,11 +6,20 @@
  * *.test.ts), so it doesn't need browsers.
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { count, formatDuration, parseSet, summarizeSet } from '@parse-org-set/core'
+import {
+  count,
+  defaultOutputFolder,
+  formatDuration,
+  parseSet,
+  planExtraction,
+  planSimpleExtraction,
+  summarizeSet,
+} from '@parse-org-set/core'
+import { unzipSync } from 'fflate'
 import { chromium, firefox, webkit, type Browser, type BrowserType, type Page } from 'playwright'
 
 import { fakeFiles } from '../../core/test/fixtures/fake-sets'
@@ -167,6 +176,50 @@ for (const [name, type] of browsers) {
       expect(await shownRows(page)).toEqual(expectedRows(fake.bytes))
       expect(problems).toEqual([])
     })
+
+    for (const options of [
+      { simple: false, ascii: false },
+      { simple: true, ascii: true },
+    ]) {
+      test(`downloads a zip holding what the CLI would write (${JSON.stringify(options)})`, async () => {
+        const { page, problems } = await openPage(browser)
+        const fake = fakes[0]
+        if (fake === undefined) {
+          throw new Error('No fake files')
+        }
+        await page.setInputFiles('input[type=file]', join(dir, fake.name))
+        await page.locator('#result').waitFor({ state: 'visible', timeout: 5000 })
+        await page.locator('input[name=simple]').setChecked(options.simple)
+        await page.locator('input[name=ascii]').setChecked(options.ascii)
+
+        // The same plan the CLI's extract makes, with the same options.
+        const set = parseSet(fake.bytes)
+        const plan = options.simple
+          ? planSimpleExtraction(fake.name, fake.bytes, set, { ascii: options.ascii })
+          : planExtraction(fake.name, set, { ascii: options.ascii })
+        const folder = defaultOutputFolder(
+          fake.name,
+          options,
+          options.simple ? 'simple' : 'samples',
+        )
+        expect(await page.locator('#download').textContent()).toStartWith(
+          `Download zip (${count(plan.files.length, 'WAV file')}, `,
+        )
+
+        const [download] = await Promise.all([
+          page.waitForEvent('download'),
+          page.locator('#download').click(),
+        ])
+        expect(download.suggestedFilename()).toBe(`${folder}.zip`)
+        const zip = unzipSync(new Uint8Array(readFileSync(await download.path())))
+        const files = Object.keys(zip).filter((name) => !name.endsWith('/'))
+        expect(files.sort()).toEqual(
+          [...plan.files.map((f) => `${folder}/${f.path}`), `${folder}/index.json`].sort(),
+        )
+        await page.locator('#status', { hasText: 'Saved' }).waitFor({ timeout: 5000 })
+        expect(problems).toEqual([])
+      })
+    }
 
     test('says why a file is not a set', async () => {
       const { page, problems } = await openPage(browser)

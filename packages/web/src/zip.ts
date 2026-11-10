@@ -25,10 +25,16 @@ export function zipExtraction(
   plan: ExtractionPlan,
   folder: string,
 ): Uint8Array[] {
-  const encoder = new TextEncoder()
-  const index = encoder.encode(`${JSON.stringify(plan.index, null, 2)}\n`)
+  const index = indexJson(plan)
   const folders = folderPaths(plan)
-  checkLimits(plan, folders, folder, index.length)
+  const size = zipSize(plan, folder)
+  if (size.entries > MAX_ENTRIES || size.bytes > MAX_BYTES) {
+    const gigabytes = (size.bytes / 1024 ** 3).toFixed(1)
+    throw new RangeError(
+      `Too big for a zip file: ${size.entries.toLocaleString('en-US')} files and folders, ${gigabytes} GB. ` +
+        'A zip holds at most 65,535 files and 4 GB.',
+    )
+  }
 
   const parts: Uint8Array[] = []
   const errors: Error[] = []
@@ -91,29 +97,28 @@ function folderPaths(plan: ExtractionPlan): string[] {
   return [...folders]
 }
 
-/** Throws a clear error, before any work, if the zip would break a plain zip's limits. */
-function checkLimits(
-  plan: ExtractionPlan,
-  folders: string[],
-  folder: string,
-  indexLength: number,
-): void {
+/** index.json's bytes. */
+function indexJson(plan: ExtractionPlan): Uint8Array {
+  return new TextEncoder().encode(`${JSON.stringify(plan.index, null, 2)}\n`)
+}
+
+/**
+ * Exactly how big zipExtraction's zip will be, and how many entries it will
+ * hold, worked out without building it.
+ */
+export function zipSize(plan: ExtractionPlan, folder: string): { entries: number; bytes: number } {
+  const folders = folderPaths(plan)
   const entries = folders.length + plan.files.length + 1
   const encoder = new TextEncoder()
   // Each name is written twice: in its local header and in the central directory.
   const nameBytes = (path: string): number => 2 * encoder.encode(`${folder}/${path}`).length
-  let size = END_RECORD + entries * ENTRY_OVERHEAD + indexLength + nameBytes('index.json')
+  let bytes =
+    END_RECORD + entries * ENTRY_OVERHEAD + indexJson(plan).length + nameBytes('index.json')
   for (const path of folders) {
-    size += nameBytes(`${path}/`)
+    bytes += nameBytes(`${path}/`)
   }
   for (const { path, sample } of plan.files) {
-    size += nameBytes(path) + 44 + sample.audioLength
+    bytes += nameBytes(path) + 44 + sample.audioLength
   }
-  if (entries > MAX_ENTRIES || size > MAX_BYTES) {
-    const gigabytes = (size / 1024 ** 3).toFixed(1)
-    throw new RangeError(
-      `Too big for a zip file: ${entries.toLocaleString('en-US')} files and folders, ${gigabytes} GB. ` +
-        'A zip holds at most 65,535 files and 4 GB.',
-    )
-  }
+  return { entries, bytes }
 }

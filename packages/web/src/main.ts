@@ -2,8 +2,10 @@
  * The page's own code: takes a file from the picker or a drop, hands it to the
  * worker, and shows what comes back.
  */
-import type { OpenFile, WorkerReply } from './protocol'
-import { hideResult, showStatus, showSummary } from './render'
+import { count } from '@parse-org-set/core'
+
+import type { DownloadSize, PageRequest, WorkerReply, ZipOptions } from './protocol'
+import { formatSize, hideResult, showDownload, showStatus, showSummary } from './render'
 
 // The worker is built as its own file next to the page (see scripts/build.ts).
 // It's found relative to the page's address, so it works from a subfolder
@@ -42,27 +44,101 @@ interface TrustedTypes {
   ): { createScriptURL(input: string): unknown }
 }
 
+/** The open file's download sizes, once the worker has read it. */
+let sizes: { all: DownloadSize; simple: DownloadSize } | undefined
+let zipping = false
+
 worker.addEventListener('message', (event: MessageEvent<WorkerReply>) => {
   const reply = event.data
   if (reply.type === 'opened') {
+    sizes = reply.sizes
     showStatus('')
     showSummary(reply.fileName, reply.summary)
+    updateDownload()
+  } else if (reply.type === 'zipped') {
+    zipping = false
+    save(reply.zip, `${reply.zipName}.zip`)
+    showStatus(`Saved ${reply.zipName}.zip`)
+    updateDownload()
   } else {
-    showStatus(`Couldn't read ${reply.fileName}: ${reply.message}`, true)
+    zipping = false
+    showStatus(reply.message, true)
+    updateDownload()
   }
 })
 worker.addEventListener('error', () => {
   showStatus('Something went wrong. Reload the page and try again.', true)
 })
 
+function send(message: PageRequest): void {
+  worker.postMessage(message)
+}
+
 function open(file: File | undefined): void {
   if (file === undefined) {
     return
   }
+  sizes = undefined
   hideResult()
   showStatus(`Reading ${file.name}…`)
-  const message: OpenFile = { type: 'open', file }
-  worker.postMessage(message)
+  send({ type: 'open', file })
+}
+
+const simple = checkbox('simple')
+const ascii = checkbox('ascii')
+
+function checkbox(name: string): HTMLInputElement {
+  const found = document.querySelector<HTMLInputElement>(`.options input[name="${name}"]`)
+  if (found === null) {
+    throw new Error(`The page is missing the ${name} option`)
+  }
+  return found
+}
+
+function options(): ZipOptions {
+  return { simple: simple.checked, ascii: ascii.checked }
+}
+
+/** The button shows what you'd get: "Download zip (258 WAV files, 45 MB)". */
+function updateDownload(): void {
+  if (zipping) {
+    showDownload('Making the zip…', false)
+    return
+  }
+  let size: DownloadSize | undefined
+  if (sizes !== undefined) {
+    size = simple.checked ? sizes.simple : sizes.all
+  }
+  if (size === undefined) {
+    showDownload('Download zip', false)
+    return
+  }
+  showDownload(`Download zip (${count(size.files, 'WAV file')}, ${formatSize(size.bytes)})`, true)
+}
+
+simple.addEventListener('change', updateDownload)
+
+document.querySelector('#download')?.addEventListener('click', () => {
+  if (sizes === undefined || zipping) {
+    return
+  }
+  zipping = true
+  updateDownload()
+  showStatus('Making the zip…')
+  send({ type: 'zip', options: options() })
+})
+
+/** Saves a Blob as a download, through a temporary link to it. */
+function save(blob: Blob, name: string): void {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  document.body.append(link)
+  link.click()
+  link.remove()
+  // Freeing the link right away can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 const drop = document.querySelector<HTMLLabelElement>('.drop')
