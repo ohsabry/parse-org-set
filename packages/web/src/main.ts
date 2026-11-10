@@ -1,11 +1,23 @@
 /**
- * The page's own code: takes a file from the picker or a drop, hands it to the
+ * The page's own code: takes a file from the picker or a drop, hands it to a
  * worker, and shows what comes back.
+ *
+ * Each file gets a fresh worker. Picking another file stops the old one, so
+ * nothing it was still doing (reading a big file, making a zip) can finish
+ * later and replace what's on the page.
  */
 import { count } from '@parse-org-set/core'
 
 import type { DownloadSize, PageRequest, WorkerReply, ZipOptions } from './protocol'
-import { formatSize, hideResult, showDownload, showStatus, showSummary } from './render'
+import {
+  formatSize,
+  hideProgress,
+  hideResult,
+  showDownload,
+  showProgress,
+  showStatus,
+  showSummary,
+} from './render'
 
 // The worker is built as its own file next to the page. The build writes its
 // hashed name in place of WORKER_FILE (see scripts/build.ts); the dev server
@@ -14,7 +26,6 @@ import { formatSize, hideResult, showDownload, showStatus, showSummary } from '.
 declare const WORKER_FILE: string | undefined
 const workerFile = typeof WORKER_FILE === 'string' ? WORKER_FILE : 'worker.js'
 const workerUrl = new URL(workerFile, document.baseURI).href
-const worker = new Worker(trustedWorkerUrl(workerUrl), { type: 'module' })
 
 /**
  * The page's security policy turns on Trusted Types: the browser only loads
@@ -47,35 +58,60 @@ interface TrustedTypes {
   ): { createScriptURL(input: string): unknown }
 }
 
+// Approved once: the security policy allows the "worker" policy to be created only once.
+const trustedUrl = trustedWorkerUrl(workerUrl)
+
+/** The worker for the file open now, if any. */
+let worker: Worker | undefined
+
+/** Stops the current worker, if any, and starts a fresh one. */
+function startWorker(): Worker {
+  worker?.terminate()
+  const fresh = new Worker(trustedUrl, { type: 'module' })
+  // A message the old worker sent just before it was stopped may still
+  // arrive; only the current worker's count.
+  fresh.addEventListener('message', (event: MessageEvent<WorkerReply>) => {
+    if (fresh === worker) {
+      handle(event.data)
+    }
+  })
+  fresh.addEventListener('error', () => {
+    if (fresh === worker) {
+      hideProgress()
+      showStatus('Something went wrong. Reload the page and try again.', true)
+    }
+  })
+  worker = fresh
+  return fresh
+}
+
 /** The open file's download sizes, once the worker has read it. */
 let sizes: { all: DownloadSize; simple: DownloadSize } | undefined
 let zipping = false
 
-worker.addEventListener('message', (event: MessageEvent<WorkerReply>) => {
-  const reply = event.data
+function handle(reply: WorkerReply): void {
+  if (reply.type === 'progress') {
+    showProgress(reply.done / reply.total)
+    return
+  }
+  hideProgress()
   if (reply.type === 'opened') {
     sizes = reply.sizes
     showStatus('')
     showSummary(reply.fileName, reply.summary)
-    updateDownload()
   } else if (reply.type === 'zipped') {
     zipping = false
     save(reply.zip, `${reply.zipName}.zip`)
     showStatus(`Saved ${reply.zipName}.zip`)
-    updateDownload()
-  } else if (reply.type === 'failed') {
+  } else {
     zipping = false
     showStatus(reply.message, true)
-    updateDownload()
   }
-  // 'dropped': an older file finished after a newer one was picked; nothing to show.
-})
-worker.addEventListener('error', () => {
-  showStatus('Something went wrong. Reload the page and try again.', true)
-})
+  updateDownload()
+}
 
 function send(message: PageRequest): void {
-  worker.postMessage(message)
+  worker?.postMessage(message)
 }
 
 function open(file: File | undefined): void {
@@ -83,9 +119,11 @@ function open(file: File | undefined): void {
     return
   }
   sizes = undefined
+  zipping = false
   hideResult()
   showStatus(`Reading ${file.name}…`)
-  send({ type: 'open', file })
+  showProgress() // reading a file has no measurable progress, so the bar just moves
+  startWorker().postMessage({ type: 'open', file } satisfies PageRequest)
 }
 
 const simple = checkbox('simple')
@@ -129,6 +167,7 @@ document.querySelector('#download')?.addEventListener('click', () => {
   zipping = true
   updateDownload()
   showStatus('Making the zip…')
+  showProgress(0)
   send({ type: 'zip', options: options() })
 })
 

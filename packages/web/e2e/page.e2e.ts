@@ -13,6 +13,8 @@ import { join } from 'node:path'
 import {
   count,
   defaultOutputFolder,
+  encodeWav,
+  indexJson,
   parseOrgFile,
   planExtraction,
   planSimpleExtraction,
@@ -58,12 +60,6 @@ const fakes = fakeFiles()
 for (const fake of fakes) {
   writeFileSync(join(dir, fake.name), fake.bytes)
 }
-// Big enough (about 40 MB) that reading it takes longer than a small file.
-const bigPath = join(dir, 'Big.Set')
-writeFileSync(
-  bigPath,
-  buildSet({ instruments: [{ name: '-', samples: [silence('long', 0, 20_000_000)] }] }),
-)
 const notSetPath = join(dir, 'notes.txt')
 writeFileSync(notSetPath, 'These are my notes, not an ORG 24 file of any kind.')
 
@@ -76,6 +72,10 @@ afterAll(() => {
 /** The rows the page should show for a file: core's summary, as the page lays it out. */
 function expectedRows(bytes: Uint8Array): string[][] {
   return tableRows(summarizeOrgFile(parseOrgFile(bytes)))
+}
+
+function equal(a: Uint8Array | undefined, b: Uint8Array): boolean {
+  return a !== undefined && a.length === b.length && a.every((byte, i) => byte === b[i])
 }
 
 /** The rows the page shows. */
@@ -134,6 +134,7 @@ for (const [name, type] of browsers) {
         ['2', '1', 'C4', 'one sample', '1.0 s', '<img src=x onerror=alert(1)>'],
       ])
       expect(await page.locator('#result img').count()).toBe(0)
+      expect(await page.locator('#progress').isHidden()).toBe(true)
       expect(problems).toEqual([])
     })
 
@@ -215,47 +216,21 @@ for (const [name, type] of browsers) {
         expect(files.sort()).toEqual(
           [...plan.files.map((f) => `${folder}/${f.path}`), `${folder}/index.json`].sort(),
         )
+        // Every file's bytes are what the CLI writes: encodeWav for the WAVs, indexJson for the index.
+        for (const { path, sample } of plan.files) {
+          const audio = fake.bytes.subarray(
+            sample.audioOffset,
+            sample.audioOffset + sample.audioLength,
+          )
+          const wav = encodeWav({ sampleRate: sample.sampleRate, channels: sample.channels, audio })
+          expect({ path, same: equal(zip[`${folder}/${path}`], wav) }).toEqual({ path, same: true })
+        }
+        expect(new TextDecoder().decode(zip[`${folder}/index.json`])).toBe(indexJson(plan.index))
         await page.locator('#status', { hasText: 'Saved' }).waitFor({ timeout: 5000 })
+        expect(await page.locator('#progress').isHidden()).toBe(true)
         expect(problems).toEqual([])
       })
     }
-
-    test('shows the file picked last, even if an earlier one finishes reading later', async () => {
-      const { page, problems } = await openPage(browser)
-      const small = fakes[0]
-      if (small === undefined) {
-        throw new Error('No fake files')
-      }
-      // Inside the worker, note every file it sets aside, so the test can wait
-      // for the big file to really finish rather than guess how long it takes.
-      // The page starts its worker as it loads: take it if it's there, or wait.
-      const worker = page.workers()[0] ?? (await page.waitForEvent('worker'))
-      await worker.evaluate(() => {
-        const scope = self as unknown as { postMessage(m: unknown): void; dropped?: string[] }
-        const post = scope.postMessage.bind(scope)
-        scope.dropped = []
-        scope.postMessage = (message: unknown) => {
-          const m = message as { type: string; fileName?: string }
-          if (m.type === 'dropped' && m.fileName !== undefined) {
-            scope.dropped?.push(m.fileName)
-          }
-          post(message)
-        }
-      })
-      await page.setInputFiles('input[type=file]', bigPath)
-      await page.setInputFiles('input[type=file]', join(dir, small.name))
-      await page.locator('#file-name', { hasText: small.name }).waitFor({ timeout: 5000 })
-      // The big file finishes later and is set aside, not shown.
-      const dropped = async (): Promise<string[] | undefined> =>
-        worker.evaluate(() => (self as unknown as { dropped?: string[] }).dropped)
-      for (let i = 0; i < 100 && (await dropped())?.length === 0; i++) {
-        await page.waitForTimeout(100)
-      }
-      expect(await dropped()).toEqual(['Big.Set'])
-      expect(await page.locator('#file-name').textContent()).toBe(small.name)
-      expect(await shownRows(page)).toEqual(expectedRows(small.bytes))
-      expect(problems).toEqual([])
-    })
 
     test('says why a file is not a set', async () => {
       const { page, problems } = await openPage(browser)

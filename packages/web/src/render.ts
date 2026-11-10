@@ -21,11 +21,29 @@ const fileName = element<HTMLHeadingElement>('#file-name')
 const overview = element<HTMLParagraphElement>('#overview')
 const rows = element<HTMLTableSectionElement>('#instruments')
 const download = element<HTMLButtonElement>('#download')
+const progress = element<HTMLProgressElement>('#progress')
 
 /** A message under the drop box, read out by screen readers. */
 export function showStatus(text: string, isError = false): void {
   status.textContent = text
   status.classList.toggle('error', isError)
+}
+
+/**
+ * Shows the progress bar: filled to `fraction` (0 to 1), or, with no
+ * fraction, moving back and forth for work whose progress can't be measured.
+ */
+export function showProgress(fraction?: number): void {
+  if (fraction === undefined) {
+    progress.removeAttribute('value')
+  } else {
+    progress.value = fraction
+  }
+  progress.hidden = false
+}
+
+export function hideProgress(): void {
+  progress.hidden = true
 }
 
 export function hideResult(): void {

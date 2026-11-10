@@ -63,10 +63,9 @@ effects.
 
 ## How this is built
 
-The code is written by AI coding agents (Claude Code), working from my requirements and reviewed
-by me before each commit. The `.Set` format is reverse-engineered from only a few files, so expect
-wrong results on other sets and check the output. Audit it and exercise independent human judgment
-before trusting it with important data or decisions.
+The code is written by AI coding agents (Claude Code), working from my requirements, and I review
+it before each commit. The `.Set` format was worked out from a handful of files, so other sets may
+not come out right: check the sounds you get before relying on them.
 
 ## License
 

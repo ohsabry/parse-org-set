@@ -1,7 +1,8 @@
 /**
  * Runs in a background thread, so reading, parsing and zipping a big set never
- * freezes the page. It reads the file itself (the page only passes a handle)
- * and keeps it, to build the zip when asked.
+ * freezes the page. It reads the file itself (the page only passes a handle),
+ * plans the downloads, then lets the bytes go: the zip is built from slices
+ * of the file on disk, so a big set isn't held in memory while you choose.
  */
 import {
   OrgFormatError,
@@ -11,7 +12,6 @@ import {
   planSimpleExtraction,
   summarizeOrgFile,
   type ExtractionPlan,
-  type OrgFile,
 } from '@parse-org-set/core'
 
 import type { DownloadSize, PageRequest, WorkerReply, ZipOptions } from './protocol'
@@ -22,14 +22,11 @@ import { zipExtraction, zipSize } from './zip'
 // Worker object, so it's typed as that.
 const scope = self as unknown as Pick<Worker, 'postMessage' | 'addEventListener'>
 
-/** The file open right now, kept for building its zip. */
-let current: { fileName: string; bytes: Uint8Array; set: OrgFile } | undefined
-/**
- * Counts open requests. Reading a file takes a while, so a big file picked
- * first can finish after a small one picked next; only the latest request's
- * result is used.
- */
-let latestOpen = 0
+/** The four downloads: every sample or "Fewer files", each with or without English letters. */
+type PlanKey = `${'all' | 'simple'}-${'original' | 'ascii'}`
+
+/** The file open right now: a handle to it on disk, and its planned downloads. */
+let current: { file: File; plans: Record<PlanKey, ExtractionPlan> } | undefined
 
 function reply(message: WorkerReply): void {
   scope.postMessage(message)
@@ -40,68 +37,70 @@ scope.addEventListener('message', (event: MessageEvent<PageRequest>) => {
   if (request.type === 'open') {
     void open(request.file)
   } else {
-    zip(request.options)
+    void zip(request.options)
   }
 })
 
+// The page starts a fresh worker for every file it opens, so this worker only
+// ever handles one file and never has to worry about another replacing it.
 async function open(file: File): Promise<void> {
-  const request = ++latestOpen
-  current = undefined
   try {
     const bytes = new Uint8Array(await file.arrayBuffer())
-    if (request !== latestOpen) {
-      // Another file was picked meanwhile. Saying so costs nothing, and lets
-      // the browser tests know for certain that this happened.
-      reply({ type: 'dropped', fileName: file.name })
-      return
-    }
     const set = parseOrgFile(bytes)
-    current = { fileName: file.name, bytes, set }
+    // Plan every download now, while the bytes are here: "Fewer files" reads
+    // the audio to skip duplicate drum sounds. After this, only the plans
+    // (names and offsets) and the file handle are kept.
+    const plans = {
+      'all-original': planExtraction(file.name, set),
+      'all-ascii': planExtraction(file.name, set, { ascii: true }),
+      'simple-original': planSimpleExtraction(file.name, bytes, set),
+      'simple-ascii': planSimpleExtraction(file.name, bytes, set, { ascii: true }),
+    }
+    current = { file, plans }
     const sizes = {
       all: sizeOf({ simple: false, ascii: false }),
       simple: sizeOf({ simple: true, ascii: false }),
     }
     reply({ type: 'opened', fileName: file.name, summary: summarizeOrgFile(set), sizes })
   } catch (error) {
-    if (request === latestOpen) {
-      fail(error, `Couldn't read ${file.name}`)
-    }
+    fail(error, `Couldn't read ${file.name}`)
   }
 }
 
-function zip(options: ZipOptions): void {
+async function zip(options: ZipOptions): Promise<void> {
   if (current === undefined) {
     reply({ type: 'failed', message: 'Open a file first.' })
     return
   }
   try {
-    const plan = planFor(options)
-    const zipName = folderFor(options)
-    const parts = zipExtraction(current.bytes, plan, zipName)
-    // A Blob made from the parts. Posting it to the page passes a handle. The
-    // parts are views of plain ArrayBuffers (the file's, and fflate's own),
-    // never shared memory, which is what Blob's type asks for.
-    const blob = new Blob(parts as Uint8Array<ArrayBuffer>[], { type: 'application/zip' })
+    const zipName = folderFor(current.file.name, options)
+    // Report progress at most about 10 times a second.
+    let lastReport = 0
+    const onProgress = (done: number, total: number): void => {
+      const now = performance.now()
+      if (now - lastReport > 100 || done === total) {
+        lastReport = now
+        reply({ type: 'progress', done, total })
+      }
+    }
+    const blob = await zipExtraction(current.file, planFor(options), zipName, onProgress)
+    // Posting a Blob to the page passes a handle; nothing is copied.
     reply({ type: 'zipped', zip: blob, zipName })
   } catch (error) {
     fail(error, "Couldn't make the zip")
   }
 }
 
-/** The same plans as the CLI's extract, with or without --simple and --ascii. */
 function planFor(options: ZipOptions): ExtractionPlan {
   if (current === undefined) {
     throw new Error('No file is open')
   }
-  const { fileName, bytes, set } = current
-  return options.simple
-    ? planSimpleExtraction(fileName, bytes, set, { ascii: options.ascii })
-    : planExtraction(fileName, set, { ascii: options.ascii })
+  const key: PlanKey = `${options.simple ? 'simple' : 'all'}-${options.ascii ? 'ascii' : 'original'}`
+  return current.plans[key]
 }
 
 /** The zip's top folder, also its name: what the CLI calls its default folder. */
-function folderFor(options: ZipOptions): string {
-  const fileName = current?.fileName ?? ''
+function folderFor(fileName: string, options: ZipOptions): string {
   return defaultOutputFolder(
     fileName,
     { ascii: options.ascii },
@@ -111,7 +110,8 @@ function folderFor(options: ZipOptions): string {
 
 function sizeOf(options: ZipOptions): DownloadSize {
   const plan = planFor(options)
-  return { files: plan.files.length, bytes: zipSize(plan, folderFor(options)).bytes }
+  const fileName = current?.file.name ?? ''
+  return { files: plan.files.length, bytes: zipSize(plan, folderFor(fileName, options)).bytes }
 }
 
 /** A file that doesn't fit the format, or a zip that's too big, says why. Anything else is a bug. */

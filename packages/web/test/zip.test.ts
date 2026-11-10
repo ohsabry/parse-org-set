@@ -30,13 +30,15 @@ const folder = 'x_samples'
 
 const dir = mkdtempSync(join(tmpdir(), 'parse-org-set-zip-'))
 const zipPath = join(dir, 'x.zip')
-const zip = new Uint8Array(Buffer.concat(zipExtraction(bytes, plan, folder)))
+// The source is a Blob, as a File is in the browser.
+const source = new Blob([bytes.slice()])
+const zip = new Uint8Array(await (await zipExtraction(source, plan, folder)).arrayBuffer())
 writeFileSync(zipPath, zip)
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
-// Two checks. Info-ZIP's unzip (on macOS and Ubuntu) validates the zip's
-// structure and every CRC by a standard tool's rules. fflate's reader, a
-// separate code path from its writer, reads names and contents back. It decodes
+// Two checks by readers we didn't write. Info-ZIP's unzip (on macOS and Ubuntu)
+// validates the zip's structure and every CRC by a standard tool's rules.
+// fflate's reader reads names and contents back. It decodes
 // a name as UTF-8 only when the zip says so (flag bit 11), so Arabic names
 // coming back intact proves the flag. (Apple's unzip can't be used for names:
 // it's a 2009 build without Unicode support.)
@@ -116,13 +118,13 @@ describe('zipExtraction', () => {
     })
   })
 
-  test('refuses, with a clear error, more files than a plain zip can hold', () => {
+  test('refuses, with a clear error, more files than a plain zip can hold', async () => {
     const first = plan.files[0]
     if (first === undefined) {
       throw new Error('The test set has no files')
     }
     const huge: ExtractionPlan = { ...plan, files: Array.from({ length: 70_000 }, () => first) }
-    expect(() => zipExtraction(bytes, huge, folder)).toThrow(
+    await expect(zipExtraction(source, huge, folder)).rejects.toThrow(
       'A zip holds at most 65,535 files and 4 GB.',
     )
   })

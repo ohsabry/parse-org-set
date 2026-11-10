@@ -99,6 +99,16 @@ code {
   border-color: var(--link);
 }
 
+#progress {
+  display: block;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+#progress[hidden] {
+  display: none;
+}
+
 #status.error {
   color: var(--error);
 }
