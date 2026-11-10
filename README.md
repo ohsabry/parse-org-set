@@ -54,11 +54,16 @@ File names start with the sample's root note; middle C (MIDI note 60) is `C4`. T
 in a set is the app's **Shots**, usually a metronome, a crash and the designer's shouts and
 effects.
 
-| Option     | What it does                                                                                                                                                                                    |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `folder`   | Where to write. Defaults to `<set name>_samples` (or `_simple`). Must be new or empty, so nothing is overwritten.                                                                               |
-| `--simple` | Fewer files: one sample per melodic instrument in `melodic/` (a C near middle C where there is one) and every distinct drum sound in `drums/<kit>/`. Audio phrases are left out.                |
-| `--ascii`  | Only ASCII in folder and file names; Arabic is written in the Arabic chat alphabet (ع → 3, ح → 7): `014_إسترينج_ياماها_🎼` becomes `014_estring_iamaha`. `index.json` keeps the original names. |
+Options:
+
+- `folder`: where to write. It defaults to `<set name>_samples` (or `<set name>_simple`), and
+  must be new or empty, so nothing is ever overwritten.
+- `--simple`: fewer files. One sample per melodic instrument in `melodic/` (a C near middle C
+  where there is one), and every distinct drum sound in `drums/<kit>/`. Audio phrases are left
+  out.
+- `--ascii`: English letters only in folder and file names. Arabic is spelled the way people text
+  it, with numbers for some letters (ع becomes 3, ح becomes 7), so the folder `إسترينج_ياماها`
+  becomes `estring_iamaha`. `index.json` always keeps the original names.
 
 ## More
 
