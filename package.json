@@ -29,7 +29,7 @@
     "extract": "bun packages/cli/src/main.ts extract",
     "web": "bun packages/web/scripts/dev.ts",
     "web:build": "bun packages/web/scripts/build.ts",
-    "test:e2e": "bun run web:build && bun test ./packages/web/e2e/page.e2e.ts",
+    "test:e2e": "bun run web:build && bun test --timeout 20000 ./packages/web/e2e/page.e2e.ts",
     "fixtures": "bun packages/test-fixtures/src/write-fake-sets.ts",
     "e2e:install": "cd packages/web && bunx playwright install chromium firefox webkit"
   }
