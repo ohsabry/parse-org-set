@@ -10,6 +10,8 @@ import page from '../index.html'
 const worker = join(import.meta.dir, '../src/worker.ts')
 
 const server = Bun.serve({
+  // Only this computer can reach it, not others on the same network.
+  hostname: '127.0.0.1',
   port: 3000,
   development: true,
   routes: {

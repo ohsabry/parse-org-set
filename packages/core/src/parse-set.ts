@@ -1,3 +1,4 @@
+import { OutOfBoundsError } from './errors/out-of-bounds-error'
 import { SetFormatError } from './errors/set-format-error'
 import { readFileHeader } from './file-header'
 import { readInstrumentSettings } from './instrument-settings'
@@ -40,7 +41,19 @@ interface Group {
  * Headers with only a name are layers, grouped under the instrument before.
  */
 export function parseSet(bytes: Uint8Array): SetFile {
-  const reader = new ByteReader(bytes)
+  try {
+    return walk(new ByteReader(bytes))
+  } catch (error) {
+    // Every read is bounds-checked; one that runs off the end means the file
+    // doesn't fit the format either, so callers only ever see SetFormatError.
+    if (error instanceof OutOfBoundsError) {
+      throw new SetFormatError(`The file ends too early: ${error.message}`, error.offset)
+    }
+    throw error
+  }
+}
+
+function walk(reader: ByteReader): SetFile {
   const { fileType, version, firstInstrumentOffset, pool } = readFileHeader(reader)
   // Instrument texts end with the version: "Oud\r1.3.1\r" or "Oud\r1.4.9".
   const ending = new TextEncoder().encode(
@@ -63,7 +76,9 @@ export function parseSet(bytes: Uint8Array): SetFile {
       break
     }
     const next = hiddenHeader(reader, at, firstSample, ending)
-    groups.push(readGroup(reader, at, next ?? firstSample, next === undefined, pool, version))
+    groups.push(
+      readGroup(reader, at, next ?? firstSample, next === undefined, pool, version, layout),
+    )
     at = next ?? reader.offset
   }
 
@@ -179,6 +194,7 @@ function readGroup(
   hasSamples: boolean,
   pool: ReadonlyMap<number, PoolEntry>,
   version: string,
+  layout: SampleLayout,
 ): Group {
   reader.seek(headerOffset)
   const textLength = reader.u32()
@@ -207,9 +223,13 @@ function readGroup(
   const count = reader.u8()
   for (let i = 0; i < count; i++) {
     try {
-      samples.push(readSample(reader, pool, sampleLayout(version)))
+      samples.push(readSample(reader, pool, layout))
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      // A sample that doesn't fit gets context; anything else is a bug.
+      if (!(error instanceof SetFormatError || error instanceof OutOfBoundsError)) {
+        throw error
+      }
+      const reason = error.message
       throw new SetFormatError(
         `Instrument ${JSON.stringify(name)} at ${headerOffset} says ${count} samples follow, but sample ${i + 1} doesn't fit: ${reason}`,
         reader.offset,

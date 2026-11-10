@@ -1,15 +1,20 @@
 /**
  * Builds the page into packages/web/dist, ready for GitHub Pages: bundles and
- * minifies it, builds the worker as its own file (worker.js, which Bun's HTML
- * bundling doesn't do), adds the Content-Security-Policy, and copies
- * robots.txt and sitemap.xml.
+ * minifies it, builds the worker as its own file (which Bun's HTML bundling
+ * doesn't do), adds the Content-Security-Policy, and copies robots.txt and
+ * sitemap.xml.
+ *
+ * Every file name carries a hash of its contents, the worker's too, and the
+ * page's script is built with the worker's exact name. Browsers cache files
+ * for a while, so with a fixed name a returning visitor could get a new page
+ * with an old worker (or the reverse) right after a deploy.
  *
  * The policy is added here, not written in index.html, because Bun's dev
  * server (`bun run web`) injects an inline script for live reloading, which
  * the policy would block.
  */
 import { cpSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 // Everything the page may load is its own files: no other sites, no inline
 // code, and no network requests at all (connect-src 'none'), so a file you
@@ -34,17 +39,7 @@ const root = join(import.meta.dir, '..')
 const out = join(root, 'dist')
 rmSync(out, { recursive: true, force: true })
 
-const builds = [
-  await Bun.build({ entrypoints: [join(root, 'index.html')], outdir: out, minify: true }),
-  // A fixed name, so main.ts can find it.
-  await Bun.build({
-    entrypoints: [join(root, 'src/worker.ts')],
-    outdir: out,
-    minify: true,
-    naming: 'worker.js',
-  }),
-]
-for (const result of builds) {
+function check(result: Awaited<ReturnType<typeof Bun.build>>): void {
   if (!result.success) {
     for (const log of result.logs) {
       console.error(log)
@@ -52,6 +47,25 @@ for (const result of builds) {
     process.exit(1)
   }
 }
+
+const worker = await Bun.build({
+  entrypoints: [join(root, 'src/worker.ts')],
+  outdir: out,
+  minify: true,
+  naming: 'worker-[hash].[ext]',
+})
+check(worker)
+const workerFile = basename(worker.outputs[0]?.path ?? '')
+
+// main.ts reads WORKER_FILE; here it becomes the worker's hashed name.
+check(
+  await Bun.build({
+    entrypoints: [join(root, 'index.html')],
+    outdir: out,
+    minify: true,
+    define: { WORKER_FILE: JSON.stringify(workerFile) },
+  }),
+)
 
 const htmlPath = join(out, 'index.html')
 const html = readFileSync(htmlPath, 'utf8')

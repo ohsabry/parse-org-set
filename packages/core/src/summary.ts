@@ -78,3 +78,9 @@ export function describeSummary(summary: SetSummary): string {
 export function count(n: number, noun: string): string {
   return `${n.toLocaleString('en-US')} ${noun}${n === 1 ? '' : 's'}`
 }
+
+/** The name to show for an instrument: "Alto Sax (+2 layers)" when it has extra layers. */
+export function instrumentTitle(instrument: InstrumentSummary): string {
+  const layers = instrument.layerCount
+  return layers === 0 ? instrument.name : `${instrument.name} (+${count(layers, 'layer')})`
+}

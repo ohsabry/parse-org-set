@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 
-import { encodeWav, type ExtractionPlan } from '@parse-org-set/core'
+import { encodeWav, indexJson, planFolders, type ExtractionPlan } from '@parse-org-set/core'
 
 import { ExtractError } from './errors/extract-error'
 
@@ -24,18 +24,7 @@ export function writeExtraction(
     }
   }
 
-  // Every folder the index lists (an empty instrument still gets its folder),
-  // plus every folder a file goes in.
-  const folders = new Set<string>()
-  for (const instrument of plan.index.instruments) {
-    folders.add(instrument.folder)
-    for (const layer of instrument.layers) {
-      folders.add(layer.folder)
-    }
-  }
-  for (const { path } of plan.files) {
-    folders.add(dirname(path))
-  }
+  const folders = planFolders(plan)
   mkdirSync(folder, { recursive: true })
   for (const sub of folders) {
     mkdirSync(join(folder, sub), { recursive: true })
@@ -48,7 +37,7 @@ export function writeExtraction(
     const wav = encodeWav({ sampleRate: sample.sampleRate, channels: sample.channels, audio })
     writeFileSync(join(folder, path), wav)
   }
-  writeFileSync(join(folder, 'index.json'), `${JSON.stringify(plan.index, null, 2)}\n`)
+  writeFileSync(join(folder, 'index.json'), indexJson(plan.index))
 
-  return { files: plan.files.length, folders: folders.size }
+  return { files: plan.files.length, folders: folders.length }
 }

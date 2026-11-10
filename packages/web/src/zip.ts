@@ -1,4 +1,4 @@
-import { wavHeader, type ExtractionPlan } from '@parse-org-set/core'
+import { indexJson, planFolders, wavHeader, type ExtractionPlan } from '@parse-org-set/core'
 import { Zip, ZipPassThrough } from 'fflate'
 
 // A zip without the ZIP64 extension (which fflate doesn't write) counts its
@@ -25,8 +25,8 @@ export function zipExtraction(
   plan: ExtractionPlan,
   folder: string,
 ): Uint8Array[] {
-  const index = indexJson(plan)
-  const folders = folderPaths(plan)
+  const index = new TextEncoder().encode(indexJson(plan.index))
+  const folders = planFolders(plan)
   const size = zipSize(plan, folder)
   if (size.entries > MAX_ENTRIES || size.bytes > MAX_BYTES) {
     const gigabytes = (size.bytes / 1024 ** 3).toFixed(1)
@@ -82,38 +82,21 @@ function addEntry(zip: Zip, name: string, chunks: Uint8Array[]): void {
   }
 }
 
-/** Every folder the CLI would create: each instrument's and layer's, and each file's. */
-function folderPaths(plan: ExtractionPlan): string[] {
-  const folders = new Set<string>()
-  for (const instrument of plan.index.instruments) {
-    folders.add(instrument.folder)
-    for (const layer of instrument.layers) {
-      folders.add(layer.folder)
-    }
-  }
-  for (const { path } of plan.files) {
-    folders.add(path.slice(0, path.lastIndexOf('/')))
-  }
-  return [...folders]
-}
-
-/** index.json's bytes. */
-function indexJson(plan: ExtractionPlan): Uint8Array {
-  return new TextEncoder().encode(`${JSON.stringify(plan.index, null, 2)}\n`)
-}
-
 /**
  * Exactly how big zipExtraction's zip will be, and how many entries it will
  * hold, worked out without building it.
  */
 export function zipSize(plan: ExtractionPlan, folder: string): { entries: number; bytes: number } {
-  const folders = folderPaths(plan)
+  const folders = planFolders(plan)
   const entries = folders.length + plan.files.length + 1
   const encoder = new TextEncoder()
   // Each name is written twice: in its local header and in the central directory.
   const nameBytes = (path: string): number => 2 * encoder.encode(`${folder}/${path}`).length
   let bytes =
-    END_RECORD + entries * ENTRY_OVERHEAD + indexJson(plan).length + nameBytes('index.json')
+    END_RECORD +
+    entries * ENTRY_OVERHEAD +
+    new TextEncoder().encode(indexJson(plan.index)).length +
+    nameBytes('index.json')
   for (const path of folders) {
     bytes += nameBytes(`${path}/`)
   }

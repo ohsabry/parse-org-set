@@ -35,7 +35,8 @@ export function planSimpleExtraction(
   const files: PlannedFile[] = []
   const index: ExtractionIndex = { source: sourceName, version: set.version, instruments: [] }
   const digits = Math.max(2, String(set.instruments.length).length)
-  const exported: Sample[] = []
+  // Drum sounds already exported, by fingerprint (see below).
+  const exported = new Map<string, Sample[]>()
 
   for (const [i, instrument] of set.instruments.entries()) {
     const label = `${pad(i + 1, digits)}_${nameFor(instrumentLabel(set, i), options)}`
@@ -53,10 +54,12 @@ export function planSimpleExtraction(
       }
       let n = 0
       for (const sample of sounds) {
-        if (exported.some((other) => sameAudio(bytes, sample, other))) {
+        const key = fingerprint(bytes, sample)
+        const sameKey = exported.get(key) ?? []
+        if (sameKey.some((other) => sameAudio(bytes, sample, other))) {
           continue
         }
-        exported.push(sample)
+        exported.set(key, [...sameKey, sample])
         n++
         const file = sampleFileName(n, 3, sample, options)
         files.push({ path: `${folder}/${file}`, sample })
@@ -100,6 +103,20 @@ export function pickMelodicSample(samples: Sample[]): Sample | undefined {
     }
   }
   return best
+}
+
+/**
+ * A quick fingerprint of a sample's audio: its length and a 32-bit FNV-1a
+ * hash of its bytes. Equal audio always gets an equal fingerprint, so only
+ * samples that share one need comparing byte by byte, instead of every pair.
+ */
+function fingerprint(bytes: Uint8Array, sample: Sample): string {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < sample.audioLength; i++) {
+    hash ^= bytes[sample.audioOffset + i] ?? 0
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return `${sample.audioLength}:${hash >>> 0}`
 }
 
 /** True if two samples' audio is byte-for-byte the same. */

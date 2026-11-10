@@ -24,6 +24,12 @@ const scope = self as unknown as Pick<Worker, 'postMessage' | 'addEventListener'
 
 /** The file open right now, kept for building its zip. */
 let current: { fileName: string; bytes: Uint8Array; set: SetFile } | undefined
+/**
+ * Counts open requests. Reading a file takes a while, so a big file picked
+ * first can finish after a small one picked next; only the latest request's
+ * result is used.
+ */
+let latestOpen = 0
 
 function reply(message: WorkerReply): void {
   scope.postMessage(message)
@@ -39,9 +45,13 @@ scope.addEventListener('message', (event: MessageEvent<PageRequest>) => {
 })
 
 async function open(file: File): Promise<void> {
+  const request = ++latestOpen
   current = undefined
   try {
     const bytes = new Uint8Array(await file.arrayBuffer())
+    if (request !== latestOpen) {
+      return // another file was picked meanwhile
+    }
     const set = parseSet(bytes)
     current = { fileName: file.name, bytes, set }
     const sizes = {
@@ -50,12 +60,15 @@ async function open(file: File): Promise<void> {
     }
     reply({ type: 'opened', fileName: file.name, summary: summarizeSet(set), sizes })
   } catch (error) {
-    fail(error, `Couldn't read ${file.name}`)
+    if (request === latestOpen) {
+      fail(error, `Couldn't read ${file.name}`)
+    }
   }
 }
 
 function zip(options: ZipOptions): void {
   if (current === undefined) {
+    reply({ type: 'failed', message: 'Open a file first.' })
     return
   }
   try {

@@ -2,8 +2,10 @@ export { formatDuration, totalSeconds } from './durations'
 export { SetFormatError } from './errors/set-format-error'
 export {
   defaultOutputFolder,
+  indexJson,
   instrumentLabel,
   planExtraction,
+  planFolders,
   type ExtractionIndex,
   type ExtractionPlan,
   type NameOptions,
@@ -15,6 +17,7 @@ export { planSimpleExtraction } from './simple'
 export {
   count,
   describeSummary,
+  instrumentTitle,
   summarizeSet,
   type InstrumentSummary,
   type SetSummary,

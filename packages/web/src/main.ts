@@ -7,10 +7,13 @@ import { count } from '@parse-org-set/core'
 import type { DownloadSize, PageRequest, WorkerReply, ZipOptions } from './protocol'
 import { formatSize, hideResult, showDownload, showStatus, showSummary } from './render'
 
-// The worker is built as its own file next to the page (see scripts/build.ts).
-// It's found relative to the page's address, so it works from a subfolder
-// like ohsabry.github.io/parse-org-set/ too.
-const workerUrl = new URL('worker.js', document.baseURI).href
+// The worker is built as its own file next to the page. The build writes its
+// hashed name in place of WORKER_FILE (see scripts/build.ts); the dev server
+// serves it as worker.js. It's found relative to the page's address, so it
+// works from a subfolder like ohsabry.github.io/parse-org-set/ too.
+declare const WORKER_FILE: string | undefined
+const workerFile = typeof WORKER_FILE === 'string' ? WORKER_FILE : 'worker.js'
+const workerUrl = new URL(workerFile, document.baseURI).href
 const worker = new Worker(trustedWorkerUrl(workerUrl), { type: 'module' })
 
 /**

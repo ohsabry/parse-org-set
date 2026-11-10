@@ -40,6 +40,12 @@ describe('safeName', () => {
     expect(safeName(' / ')).toBe('unnamed')
     expect(safeName('...')).toBe('unnamed')
   })
+
+  test('drops invisible direction controls, which can disguise a name', () => {
+    // U+202E reverses what follows on screen: "abc‮gnp.exe" would show as "abcexe.png".
+    expect(safeName('abc\u202egnp.exe')).toBe('abcgnp.exe')
+    expect(safeName('\u2067عود\u2069 \u200fC4')).toBe('عود_C4')
+  })
 })
 
 test('ascii mode: every path is plain ASCII', () => {

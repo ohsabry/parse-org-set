@@ -1,7 +1,7 @@
 import {
-  count,
   describeSummary,
   formatDuration,
+  instrumentTitle,
   summarizeSet,
   type SetFile,
 } from '@parse-org-set/core'
@@ -11,14 +11,13 @@ export function formatSummary(fileName: string, set: SetFile): string {
   const summary = summarizeSet(set)
   const table: string[][] = [['#', 'Samples', 'Notes', 'Spacing', 'Duration', 'Instrument']]
   for (const row of summary.instruments) {
-    const layers = row.layerCount === 0 ? '' : ` (+${count(row.layerCount, 'layer')})`
     table.push([
       String(row.number),
       String(row.sampleCount),
       row.notes,
       row.spacing,
       formatDuration(row.seconds),
-      `${row.name}${layers}`,
+      instrumentTitle(row),
     ])
   }
 

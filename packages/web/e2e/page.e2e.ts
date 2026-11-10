@@ -14,6 +14,7 @@ import {
   count,
   defaultOutputFolder,
   formatDuration,
+  instrumentTitle,
   parseSet,
   planExtraction,
   planSimpleExtraction,
@@ -27,6 +28,7 @@ import { buildSet, type FakeSample } from '../../core/test/helpers/build-set'
 
 const dist = join(import.meta.dir, '../dist')
 const server = Bun.serve({
+  hostname: '127.0.0.1',
   port: 0,
   fetch(request) {
     const path = new URL(request.url).pathname
@@ -58,6 +60,12 @@ const fakes = fakeFiles()
 for (const fake of fakes) {
   writeFileSync(join(dir, fake.name), fake.bytes)
 }
+// Big enough (about 40 MB) that reading it takes longer than a small file.
+const bigPath = join(dir, 'Big.Set')
+writeFileSync(
+  bigPath,
+  buildSet({ instruments: [{ name: '-', samples: [silence('long', 0, 20_000_000)] }] }),
+)
 const notSetPath = join(dir, 'notes.txt')
 writeFileSync(notSetPath, 'These are my notes, not an ORG 24 file of any kind.')
 
@@ -71,14 +79,13 @@ afterAll(() => {
 function expectedRows(bytes: Uint8Array): string[][] {
   const rows: string[][] = []
   for (const row of summarizeSet(parseSet(bytes)).instruments) {
-    const layers = row.layerCount === 0 ? '' : ` (+${count(row.layerCount, 'layer')})`
     rows.push([
       String(row.number),
       row.sampleCount.toLocaleString('en-CA'),
       row.notes,
       row.spacing,
       formatDuration(row.seconds),
-      `${row.name}${layers}`,
+      instrumentTitle(row),
     ])
   }
   return rows
@@ -220,6 +227,22 @@ for (const [name, type] of browsers) {
         expect(problems).toEqual([])
       })
     }
+
+    test('shows the file picked last, even if an earlier one finishes reading later', async () => {
+      const { page, problems } = await openPage(browser)
+      const small = fakes[0]
+      if (small === undefined) {
+        throw new Error('No fake files')
+      }
+      await page.setInputFiles('input[type=file]', bigPath)
+      await page.setInputFiles('input[type=file]', join(dir, small.name))
+      await page.locator('#file-name', { hasText: small.name }).waitFor({ timeout: 5000 })
+      // Give the big file time to finish too; it must not replace the small one.
+      await page.waitForTimeout(1500)
+      expect(await page.locator('#file-name').textContent()).toBe(small.name)
+      expect(await shownRows(page)).toEqual(expectedRows(small.bytes))
+      expect(problems).toEqual([])
+    })
 
     test('says why a file is not a set', async () => {
       const { page, problems } = await openPage(browser)

@@ -54,13 +54,17 @@ export interface NameOptions {
 // Characters that macOS, Linux or Windows don't allow in file names.
 const UNSAFE = new Set(['/', '\\', ':', '*', '?', '"', '<', '>', '|'])
 
+// Invisible characters that change the direction text is shown in. In a file
+// name they can disguise it: "abc\u202Egnp.exe.wav" shows as "abcvaw.exe.png".
+const DIRECTION_CONTROLS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u
+
 // File systems allow 255 bytes per file or folder name. Names are kept well
 // under that, leaving room for the number prefix, the note and ".wav".
 const MAX_NAME_BYTES = 120
 
 /**
- * Turns any text into a safe file or folder name: drops unsafe and control
- * characters, turns runs of spaces into one underscore, trims spaces and
+ * Turns any text into a safe file or folder name: drops unsafe, control and
+ * text-direction characters, turns runs of spaces into one underscore, trims spaces and
  * dots from the ends, and cuts it to 120 bytes. Returns "unnamed" if nothing
  * is left.
  */
@@ -74,7 +78,7 @@ export function safeName(text: string): string {
       continue
     }
     const code = char.codePointAt(0) ?? 0
-    if (code < 0x20 || code === 0x7f || UNSAFE.has(char)) {
+    if (code < 0x20 || code === 0x7f || UNSAFE.has(char) || DIRECTION_CONTROLS.test(char)) {
       continue
     }
     if (spaceBefore) {
@@ -212,4 +216,28 @@ export function indexEntry(file: string, sample: Sample): IndexSample {
     loop: sample.loop,
     ...(sample.poolId === undefined ? {} : { poolId: sample.poolId }),
   }
+}
+
+/**
+ * Every folder an extraction makes, relative to its output folder: each
+ * instrument's and layer's (so an empty instrument still gets one), and each
+ * file's. Parent folders like "drums" are implied by their subfolders.
+ */
+export function planFolders(plan: ExtractionPlan): string[] {
+  const folders = new Set<string>()
+  for (const instrument of plan.index.instruments) {
+    folders.add(instrument.folder)
+    for (const layer of instrument.layers) {
+      folders.add(layer.folder)
+    }
+  }
+  for (const { path } of plan.files) {
+    folders.add(path.slice(0, path.lastIndexOf('/')))
+  }
+  return [...folders]
+}
+
+/** The text of index.json. */
+export function indexJson(index: ExtractionIndex): string {
+  return `${JSON.stringify(index, null, 2)}\n`
 }

@@ -1,7 +1,10 @@
-# Never commit .Set packs or extracted audio
+# Never commit .Set or .Instrument files (often paid packs) or extracted audio
 *.Set
 *.set
 *.SET
+*.Instrument
+*.instrument
+*.INSTRUMENT
 *.wav
 *.WAV
 out/

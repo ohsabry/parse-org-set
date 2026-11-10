@@ -74,6 +74,15 @@ describe('planSimpleExtraction', () => {
     ])
   })
 
+  test('different drum sounds of the same length are both kept', () => {
+    const kit = buildSet({
+      instruments: [
+        { name: '-', kind: 1, samples: [tone('a', 36, [1, 2]), tone('b', 37, [2, 1])] },
+      ],
+    })
+    expect(planSimpleExtraction('x.Set', kit, parseSet(kit)).files.length).toBe(2)
+  })
+
   test("a drum kit's layers are exported with the kit", () => {
     const kit = buildSet({
       instruments: [
