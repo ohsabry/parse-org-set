@@ -3,7 +3,7 @@
  * (file and instrument names), so it's only ever set with textContent, never
  * as HTML.
  */
-import { describeSummary, formatDuration, type SetSummary } from '@parse-org-set/core'
+import { count, describeSummary, formatDuration, type SetSummary } from '@parse-org-set/core'
 
 function element<T extends HTMLElement>(selector: string): T {
   const found = document.querySelector<T>(selector)
@@ -36,7 +36,7 @@ export function showSummary(name: string, summary: SetSummary): void {
   const fragment = document.createDocumentFragment()
   for (const instrument of summary.instruments) {
     const row = document.createElement('tr')
-    const layers = instrument.layerCount === 0 ? '' : ` (+${instrument.layerCount})`
+    const layers = instrument.layerCount === 0 ? '' : ` (+${count(instrument.layerCount, 'layer')})`
     const cells: [string, string?][] = [
       [String(instrument.number), 'number'],
       [instrument.sampleCount.toLocaleString('en-CA'), 'number'],

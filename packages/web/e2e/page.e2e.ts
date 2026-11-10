@@ -10,8 +10,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { count, formatDuration, parseSet, summarizeSet } from '@parse-org-set/core'
 import { chromium, firefox, webkit, type Browser, type BrowserType, type Page } from 'playwright'
 
+import { fakeFiles } from '../../core/test/fixtures/fake-sets'
 import { buildSet, type FakeSample } from '../../core/test/helpers/build-set'
 
 const dist = join(import.meta.dir, '../dist')
@@ -43,6 +45,10 @@ writeFileSync(
     ],
   }),
 )
+const fakes = fakeFiles()
+for (const fake of fakes) {
+  writeFileSync(join(dir, fake.name), fake.bytes)
+}
 const notSetPath = join(dir, 'notes.txt')
 writeFileSync(notSetPath, 'These are my notes, not an ORG 24 file of any kind.')
 
@@ -52,6 +58,32 @@ afterAll(() => {
 })
 
 /** Opens the page and records anything that would mean something broke. */
+/** The table rows the page should show for a file: core's summary, laid out as the page does. */
+function expectedRows(bytes: Uint8Array): string[][] {
+  const rows: string[][] = []
+  for (const row of summarizeSet(parseSet(bytes)).instruments) {
+    const layers = row.layerCount === 0 ? '' : ` (+${count(row.layerCount, 'layer')})`
+    rows.push([
+      String(row.number),
+      row.sampleCount.toLocaleString('en-CA'),
+      row.notes,
+      row.spacing,
+      formatDuration(row.seconds),
+      `${row.name}${layers}`,
+    ])
+  }
+  return rows
+}
+
+/** The rows the page shows. */
+async function shownRows(page: Page): Promise<(string | null)[][]> {
+  return page
+    .locator('#instruments tr')
+    .evaluateAll((trs) =>
+      trs.map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent)),
+    )
+}
+
 async function openPage(browser: Browser): Promise<{ page: Page; problems: string[] }> {
   const page = await browser.newPage()
   const problems: string[] = []
@@ -94,16 +126,45 @@ for (const [name, type] of browsers) {
       expect(await page.locator('#overview').textContent()).toBe(
         'Version 1.3.1 · 2 instruments · 2 samples · 1.1 s of audio',
       )
-      const rows = await page
-        .locator('#instruments tr')
-        .evaluateAll((trs) =>
-          trs.map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent)),
-        )
-      expect(rows).toEqual([
+      expect(await shownRows(page)).toEqual([
         ['1', '1', 'C-1', 'one sample', '0.1 s', 'Shots'],
         ['2', '1', 'C4', 'one sample', '1.0 s', '<img src=x onerror=alert(1)>'],
       ])
       expect(await page.locator('#result img').count()).toBe(0)
+      expect(problems).toEqual([])
+    })
+
+    test('shows the same summary as core for every fake file', async () => {
+      const { page, problems } = await openPage(browser)
+      for (const fake of fakes) {
+        await page.setInputFiles('input[type=file]', join(dir, fake.name))
+        await page.locator('#file-name', { hasText: fake.name }).waitFor({ timeout: 5000 })
+        expect({ file: fake.name, rows: await shownRows(page) }).toEqual({
+          file: fake.name,
+          rows: expectedRows(fake.bytes),
+        })
+      }
+      expect(problems).toEqual([])
+    })
+
+    test('opens a file dropped on the box', async () => {
+      const { page, problems } = await openPage(browser)
+      const fake = fakes[0]
+      if (fake === undefined) {
+        throw new Error('No fake files')
+      }
+      // A drop carries the file in a DataTransfer, built inside the page.
+      const dataTransfer = await page.evaluateHandle(
+        ({ bytes, name }) => {
+          const transfer = new DataTransfer()
+          transfer.items.add(new File([new Uint8Array(bytes)], name))
+          return transfer
+        },
+        { bytes: [...fake.bytes], name: fake.name },
+      )
+      await page.dispatchEvent('.drop', 'drop', { dataTransfer })
+      await page.locator('#file-name', { hasText: fake.name }).waitFor({ timeout: 5000 })
+      expect(await shownRows(page)).toEqual(expectedRows(fake.bytes))
       expect(problems).toEqual([])
     })
 

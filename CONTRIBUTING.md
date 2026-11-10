@@ -28,8 +28,14 @@ The web page also has browser tests, which build it and run it in Chromium, Fire
     cd packages/web && bunx playwright install chromium firefox webkit && cd ../..
     bun run test:e2e
 
-The unit tests use small fake files built in code. To also check the parser against a real file
-you have locally:
+The tests use fake files built in code (`packages/core/test/fixtures/fake-sets.ts`): one per
+version and case the parser supports. The smoke checks and the browser tests run on all of them.
+To try them by hand, write them to a folder outside the repo:
+
+    bun run fixtures ~/Desktop/fake-sets
+
+The fakes come from our reading of the format, so real files are still what show it's right. To
+run the smoke checks on a real file you have locally:
 
     PARSE_ORG_SET_FILE="path/to/some.Set" bun test
 

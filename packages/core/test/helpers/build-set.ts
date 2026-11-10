@@ -65,7 +65,14 @@ const encoder = new TextEncoder()
 
 export function buildSet(set: FakeSet): Uint8Array {
   const version = set.version ?? '1.3.1'
-  const chunks = [fileHeader(version, set.instruments.length, pool(set.instruments))]
+  // Like real files, the count leaves out layers (headers with only a name).
+  let instrumentCount = 0
+  for (const instrument of set.instruments) {
+    if (instrument.bare !== true) {
+      instrumentCount++
+    }
+  }
+  const chunks = [fileHeader(version, instrumentCount, pool(set.instruments))]
   for (const instrument of set.instruments) {
     chunks.push(instrumentHeader(instrument, version))
     for (const sample of instrument.samples) {
