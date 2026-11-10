@@ -32,3 +32,5 @@ export type WorkerReply =
     }
   | { type: 'zipped'; zip: Blob; zipName: string }
   | { type: 'failed'; message: string }
+  /** A file finished reading after a newer one was picked, so it was set aside. */
+  | { type: 'dropped'; fileName: string }

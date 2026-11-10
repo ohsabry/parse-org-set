@@ -68,9 +68,14 @@ export function fakeFiles(): FakeFile[] {
       name: 'Fake 1.3.1.Set',
       bytes: buildSet({
         version: '1.3.1',
+        trailer: true,
         instruments: [
           shots(),
-          melodic('Oud', [48, 55, 62]),
+          {
+            ...melodic('Oud', [48, 55, 62]),
+            // 100 ms attack, 1,000 ms release, auto release on.
+            envelope: { attack: 1, decay: 0, release: 10, autoRelease: true },
+          },
           // An empty instrument (sample count 0), in the middle as in real files.
           { name: 'Empty', settingsLength: SETTINGS, samples: [] },
           melodic('كمنجة 🎻', [55, 67], { channels: 2 }),
@@ -80,9 +85,16 @@ export function fakeFiles(): FakeFile[] {
             settingsLength: SETTINGS,
             samples: [tone('36 Bass Drum', 36), tone('38 Snare', 38)],
           },
+          // An audio phrase, named the way designers mark them.
+          {
+            name: 'Groove (Audio)',
+            kind: 2,
+            settingsLength: SETTINGS,
+            samples: [tone('Groove 1', 60), tone('Groove 2', 61)],
+          },
         ],
       }),
-      expected: { instruments: 5, samples: 10, layers: 0, poolEntries: 0 },
+      expected: { instruments: 6, samples: 12, layers: 0, poolEntries: 0 },
     },
     {
       name: 'Fake 1.2.8 pool.Set',
@@ -110,7 +122,11 @@ export function fakeFiles(): FakeFile[] {
         version: '1.4.9',
         instruments: [
           shots(),
-          melodic('Alto Sax', [55, 60, 65]),
+          {
+            ...melodic('Alto Sax', [55, 60, 65]),
+            // 1.4.x adds sustain: 500 ms decay to 90 %, then 700 ms release.
+            envelope: { attack: 0, decay: 5, sustain: 90, release: 7, autoRelease: true },
+          },
           // Two layers of the sax: headers with only a name.
           { name: 'Alto Sax p', bare: true, samples: [tone('Sax p 60', 60)] },
           { name: 'Sax Breath', bare: true, samples: [{ ...tone('Breath', 72), poolId: 3 }] },

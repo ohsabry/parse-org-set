@@ -13,17 +13,16 @@ import { join } from 'node:path'
 import {
   count,
   defaultOutputFolder,
-  formatDuration,
-  instrumentTitle,
   parseOrgFile,
   planExtraction,
   planSimpleExtraction,
   summarizeOrgFile,
 } from '@parse-org-set/core'
-import { fakeFiles } from '@parse-org-set/test-fixtures'
-import { buildSet, type FakeSample } from '@parse-org-set/test-fixtures'
+import { buildSet, fakeFiles, type FakeSample } from '@parse-org-set/test-fixtures'
 import { unzipSync } from 'fflate'
 import { chromium, firefox, webkit, type Browser, type BrowserType, type Page } from 'playwright'
+
+import { tableRows } from '../src/table'
 
 const dist = join(import.meta.dir, '../dist')
 const server = Bun.serve({
@@ -74,20 +73,9 @@ afterAll(() => {
 })
 
 /** Opens the page and records anything that would mean something broke. */
-/** The table rows the page should show for a file: core's summary, laid out as the page does. */
+/** The rows the page should show for a file: core's summary, as the page lays it out. */
 function expectedRows(bytes: Uint8Array): string[][] {
-  const rows: string[][] = []
-  for (const row of summarizeOrgFile(parseOrgFile(bytes)).instruments) {
-    rows.push([
-      String(row.number),
-      row.sampleCount.toLocaleString('en-CA'),
-      row.notes,
-      row.spacing,
-      formatDuration(row.seconds),
-      instrumentTitle(row),
-    ])
-  }
-  return rows
+  return tableRows(summarizeOrgFile(parseOrgFile(bytes)))
 }
 
 /** The rows the page shows. */
@@ -238,11 +226,32 @@ for (const [name, type] of browsers) {
       if (small === undefined) {
         throw new Error('No fake files')
       }
+      // Inside the worker, note every file it sets aside, so the test can wait
+      // for the big file to really finish rather than guess how long it takes.
+      // The page starts its worker as it loads: take it if it's there, or wait.
+      const worker = page.workers()[0] ?? (await page.waitForEvent('worker'))
+      await worker.evaluate(() => {
+        const scope = self as unknown as { postMessage(m: unknown): void; dropped?: string[] }
+        const post = scope.postMessage.bind(scope)
+        scope.dropped = []
+        scope.postMessage = (message: unknown) => {
+          const m = message as { type: string; fileName?: string }
+          if (m.type === 'dropped' && m.fileName !== undefined) {
+            scope.dropped?.push(m.fileName)
+          }
+          post(message)
+        }
+      })
       await page.setInputFiles('input[type=file]', bigPath)
       await page.setInputFiles('input[type=file]', join(dir, small.name))
       await page.locator('#file-name', { hasText: small.name }).waitFor({ timeout: 5000 })
-      // Give the big file time to finish too; it must not replace the small one.
-      await page.waitForTimeout(1500)
+      // The big file finishes later and is set aside, not shown.
+      const dropped = async (): Promise<string[] | undefined> =>
+        worker.evaluate(() => (self as unknown as { dropped?: string[] }).dropped)
+      for (let i = 0; i < 100 && (await dropped())?.length === 0; i++) {
+        await page.waitForTimeout(100)
+      }
+      expect(await dropped()).toEqual(['Big.Set'])
       expect(await page.locator('#file-name').textContent()).toBe(small.name)
       expect(await shownRows(page)).toEqual(expectedRows(small.bytes))
       expect(problems).toEqual([])

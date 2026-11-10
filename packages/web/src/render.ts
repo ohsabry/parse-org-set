@@ -3,12 +3,9 @@
  * (file and instrument names), so it's only ever set with textContent, never
  * as HTML.
  */
-import {
-  describeSummary,
-  formatDuration,
-  instrumentTitle,
-  type OrgFileSummary,
-} from '@parse-org-set/core'
+import { describeSummary, type OrgFileSummary } from '@parse-org-set/core'
+
+import { COLUMNS, tableRows } from './table'
 
 function element<T extends HTMLElement>(selector: string): T {
   const found = document.querySelector<T>(selector)
@@ -48,20 +45,13 @@ export function showSummary(name: string, summary: OrgFileSummary): void {
   overview.replaceChildren(...parts)
 
   const fragment = document.createDocumentFragment()
-  for (const instrument of summary.instruments) {
+  for (const cells of tableRows(summary)) {
     const row = document.createElement('tr')
-    const cells: [string, string?][] = [
-      [String(instrument.number), 'number'],
-      [instrument.sampleCount.toLocaleString('en-CA'), 'number'],
-      [instrument.notes],
-      [instrument.spacing],
-      [formatDuration(instrument.seconds), 'number'],
-      [instrumentTitle(instrument), 'name'],
-    ]
-    for (const [text, kind] of cells) {
+    for (const [i, text] of cells.entries()) {
       const cell = document.createElement('td')
       cell.textContent = text
-      if (kind !== undefined) {
+      const kind = COLUMNS[i]
+      if (kind === 'number' || kind === 'name') {
         cell.className = kind
       }
       // Arabic names read right to left inside the left-to-right table.

@@ -86,6 +86,35 @@ describe('instrument settings', () => {
     expect(set.instruments[0]?.envelope).toBeUndefined()
   })
 
+  test('reads the envelope, with sustain only from 1.4 on', () => {
+    const header: FakeInstrument[] = [
+      {
+        name: '-',
+        settingsLength: 133,
+        samples: [mono('click', 0, 4)],
+        envelope: { attack: 15, decay: 5, sustain: 90, release: 7, autoRelease: true },
+      },
+    ]
+    expect(
+      parseOrgFile(buildSet({ version: '1.3.1', instruments: header })).instruments[0]?.envelope,
+    ).toEqual({
+      attackMs: 1500,
+      decayMs: 500,
+      sustainPercent: undefined,
+      releaseMs: 700,
+      autoRelease: true,
+    })
+    expect(
+      parseOrgFile(buildSet({ version: '1.4.9', instruments: header })).instruments[0]?.envelope,
+    ).toEqual({
+      attackMs: 1500,
+      decayMs: 500,
+      sustainPercent: 90,
+      releaseMs: 700,
+      autoRelease: true,
+    })
+  })
+
   test('a type value never seen in real files gives undefined, not a guess', () => {
     const set = parseOrgFile(
       buildSet({ instruments: [{ name: '-', samples: [mono('click', 0, 4)], kind: 7 }] }),

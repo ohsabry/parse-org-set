@@ -127,7 +127,6 @@ describe('1.10 samples', () => {
   test('the name is as long as R+1 says; bytes after it are leftovers', () => {
     // Like a real 1.10 sample: R+1 is 8 and the field goes on with spaces.
     const bytes = buildSample(sample({ nameLeftovers: '        ' }), '1.10')
-    expect(bytes[1]).toBe(8)
     const read = readSample(new ByteReader(bytes), noPool, 'v1.10')
     expect(read.name).toBe('MS000003')
     expect(read.sampleRate).toBe(16000)

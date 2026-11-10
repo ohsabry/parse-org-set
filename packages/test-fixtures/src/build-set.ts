@@ -41,6 +41,18 @@ export interface FakeInstrument {
   kind?: number
   /** A header with only a name, 3 zero bytes and the count, like one real header. */
   bare?: boolean
+  /**
+   * The envelope, in the last bytes before the sample count (see docs/format.md).
+   * Times are in 100 ms steps; sustain (a percentage) is only written in 1.4.x.
+   * The header must be long enough: settingsLength 133 is. Default all zeros.
+   */
+  envelope?: {
+    attack: number
+    decay: number
+    sustain?: number
+    release: number
+    autoRelease: boolean
+  }
 }
 
 export interface FakeSet {
@@ -48,6 +60,11 @@ export interface FakeSet {
   version?: string
   /** The first one is the Shots group. */
   instruments: FakeInstrument[]
+  /**
+   * Add a trailer after the last sample, starting like the real ones: the
+   * version text with an empty name, ff ff, then bytes nothing reads.
+   */
+  trailer?: boolean
 }
 
 const SAMPLE_HEADER_LENGTH = 97
@@ -78,6 +95,14 @@ export function buildSet(set: FakeSet): Uint8Array {
     for (const sample of instrument.samples) {
       chunks.push(buildSample(sample, version))
     }
+  }
+  if (set.trailer === true) {
+    const text = encoder.encode(versionText(version))
+    const trailer = new Uint8Array(4 + text.length + 2 + 200)
+    new DataView(trailer.buffer).setUint32(0, text.length, true)
+    trailer.set(text, 4)
+    trailer.set([0xff, 0xff], 4 + text.length)
+    chunks.push(trailer)
   }
   return concat(chunks)
 }
@@ -179,6 +204,16 @@ function instrumentHeader(instrument: FakeInstrument, version: string): Uint8Arr
   // GUESS: the rest of the settings block is left as zeros.
   if (afterText + 124 < out.length - 1) {
     out[afterText + 124] = instrument.kind ?? 0
+  }
+  const envelope = instrument.envelope
+  if (envelope !== undefined) {
+    // The 6 bytes before the count. Before 1.4: attack, decay, release, (unknown),
+    // auto release, 0. From 1.4: attack, decay, sustain, release, (unknown), auto release.
+    const auto = envelope.autoRelease ? 1 : 0
+    const bytes = version.startsWith('1.4.')
+      ? [envelope.attack, envelope.decay, envelope.sustain ?? 100, envelope.release, 0, auto]
+      : [envelope.attack, envelope.decay, envelope.release, 0, auto, 0]
+    out.set(bytes, out.length - 7)
   }
   out[out.length - 1] = count // confirmed: last byte = number of samples that follow
   return out

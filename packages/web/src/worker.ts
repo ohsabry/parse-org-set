@@ -50,7 +50,10 @@ async function open(file: File): Promise<void> {
   try {
     const bytes = new Uint8Array(await file.arrayBuffer())
     if (request !== latestOpen) {
-      return // another file was picked meanwhile
+      // Another file was picked meanwhile. Saying so costs nothing, and lets
+      // the browser tests know for certain that this happened.
+      reply({ type: 'dropped', fileName: file.name })
+      return
     }
     const set = parseOrgFile(bytes)
     current = { fileName: file.name, bytes, set }

@@ -63,11 +63,12 @@ worker.addEventListener('message', (event: MessageEvent<WorkerReply>) => {
     save(reply.zip, `${reply.zipName}.zip`)
     showStatus(`Saved ${reply.zipName}.zip`)
     updateDownload()
-  } else {
+  } else if (reply.type === 'failed') {
     zipping = false
     showStatus(reply.message, true)
     updateDownload()
   }
+  // 'dropped': an older file finished after a newer one was picked; nothing to show.
 })
 worker.addEventListener('error', () => {
   showStatus('Something went wrong. Reload the page and try again.', true)
