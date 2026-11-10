@@ -2,6 +2,7 @@
 import { basename } from 'node:path'
 import {
   SetFormatError,
+  count,
   defaultOutputFolder,
   parseSet,
   planExtraction,
@@ -12,7 +13,6 @@ import {
 import { ExtractError } from './errors/extract-error'
 import { writeExtraction } from './extract'
 import { formatSummary } from './summary'
-import { count } from './utils'
 
 const USAGE = `Usage:
   parse-org-set inspect <file.Set or .Instrument>

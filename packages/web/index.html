@@ -6,25 +6,33 @@
     <title>Sample Extractor for ORG 24: WAV files from .Set and .Instrument files</title>
     <meta
       name="description"
-      content="Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument. Runs in your browser; nothing is uploaded."
+      content="Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument. Runs in your browser; your files never leave your computer."
     />
     <link rel="canonical" href="https://ohsabry.github.io/parse-org-set/" />
     <meta name="referrer" content="no-referrer" />
     <meta name="color-scheme" content="light dark" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ohsabry.github.io/parse-org-set/" />
+    <meta property="og:site_name" content="Sample Extractor for ORG 24" />
     <meta property="og:title" content="Sample Extractor for ORG 24" />
     <meta
       property="og:description"
-      content="Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument. Runs in your browser; nothing is uploaded."
+      content="Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument. Runs in your browser; your files never leave your computer."
     />
     <meta property="og:locale" content="en_CA" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Sample Extractor for ORG 24" />
+    <meta
+      name="twitter:description"
+      content="Extract the audio samples inside ORG 24 .Set and .Instrument files as WAV files, organized by instrument. Your files never leave your computer."
+    />
     <!-- A plain square as the icon, inline so it costs no request. -->
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%231b1b1b'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%23fbfaf7'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="./src/style.css" />
+    <script type="module" src="./src/main.ts"></script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -57,8 +65,7 @@
       </p>
       <p>
         <span data-lang="en" lang="en"
-          >Runs entirely in your browser: your file stays on your computer, so nothing is
-          uploaded.</span
+          >Runs entirely in your browser: your files never leave your computer.</span
         >
       </p>
 
@@ -67,6 +74,30 @@
         <span data-lang="en" lang="en">Drop a file here, or choose one:</span>
         <input type="file" accept=".Set,.set,.Instrument,.instrument" />
       </label>
+
+      <p id="status" role="status"></p>
+
+      <section id="result" hidden>
+        <h2 id="file-name" dir="auto"></h2>
+        <p id="overview"></p>
+        <!-- On narrow screens the table scrolls sideways by itself, not the whole page.
+             tabindex lets keyboard users focus it and scroll with the arrow keys. -->
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Instruments">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" class="number"><span data-lang="en" lang="en">#</span></th>
+                <th scope="col" class="number"><span data-lang="en" lang="en">Samples</span></th>
+                <th scope="col"><span data-lang="en" lang="en">Notes</span></th>
+                <th scope="col"><span data-lang="en" lang="en">Spacing</span></th>
+                <th scope="col" class="number"><span data-lang="en" lang="en">Length</span></th>
+                <th scope="col"><span data-lang="en" lang="en">Instrument</span></th>
+              </tr>
+            </thead>
+            <tbody id="instruments"></tbody>
+          </table>
+        </div>
+      </section>
 
       <footer>
         <p>

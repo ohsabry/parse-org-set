@@ -7,6 +7,9 @@
   --muted: #666;
   --link: #0645ad;
   --line: #b5b5b5;
+  /* Controls' edges need 3:1 contrast with the background (WCAG 1.4.11). */
+  --control: #858585;
+  --error: #b00020;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -16,6 +19,8 @@
     --muted: #9b9b9b;
     --link: #8ab4f8;
     --line: #555;
+    --control: #6e6e6e;
+    --error: #ff8a80;
   }
 }
 
@@ -84,9 +89,60 @@ code {
   display: block;
   margin: 1.5rem 0;
   padding: 2rem 1rem;
-  border: 2px dashed var(--line);
+  border: 2px dashed var(--control);
   text-align: center;
   cursor: pointer;
+}
+
+/* While a file is dragged over the box. */
+.drop.over {
+  border-color: var(--link);
+}
+
+#status.error {
+  color: var(--error);
+}
+
+h2 {
+  margin: 2rem 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+#overview {
+  margin-top: 0;
+  color: var(--muted);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  padding: 0.3rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  text-align: start;
+  vertical-align: top;
+}
+
+th {
+  white-space: nowrap;
+}
+
+/* Numbers line up on the right, in equal-width digits. */
+.number {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+td:not(.name) {
+  white-space: nowrap;
 }
 
 /* Keyboard users always see where they are. */

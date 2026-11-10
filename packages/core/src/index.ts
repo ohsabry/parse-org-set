@@ -12,6 +12,13 @@ export {
 export { describeSpacing, noteLabel, noteRange } from './notes'
 export { parseSet } from './parse-set'
 export { planSimpleExtraction } from './simple'
+export {
+  count,
+  describeSummary,
+  summarizeSet,
+  type InstrumentSummary,
+  type SetSummary,
+} from './summary'
 export type {
   Envelope,
   Instrument,

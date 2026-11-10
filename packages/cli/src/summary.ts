@@ -1,53 +1,28 @@
 import {
-  describeSpacing,
+  count,
+  describeSummary,
   formatDuration,
-  instrumentLabel,
-  noteRange,
-  totalSeconds,
+  summarizeSet,
   type SetFile,
 } from '@parse-org-set/core'
 
-import { count } from './utils'
-
 /** What `inspect` prints: a header line, then one row per instrument. */
 export function formatSummary(fileName: string, set: SetFile): string {
+  const summary = summarizeSet(set)
   const table: string[][] = [['#', 'Samples', 'Notes', 'Spacing', 'Duration', 'Instrument']]
-  let sampleCount = 0
-  let seconds = 0
-
-  for (const [i, instrument] of set.instruments.entries()) {
-    // Notes and spacing describe the main samples; counts and durations
-    // include the instrument's extra layers too.
-    const roots = instrument.samples.map((s) => s.rootNote)
-    const all = [...instrument.samples]
-    for (const layer of instrument.layers) {
-      all.push(...layer.samples)
-    }
-    const instrumentSeconds = totalSeconds(all)
-    sampleCount += all.length
-    seconds += instrumentSeconds
-    const name = instrumentLabel(set, i)
-    const layers = instrument.layers.length
+  for (const row of summary.instruments) {
+    const layers = row.layerCount === 0 ? '' : ` (+${count(row.layerCount, 'layer')})`
     table.push([
-      String(i + 1),
-      String(all.length),
-      noteRange(roots),
-      describeSpacing(roots),
-      formatDuration(instrumentSeconds),
-      layers === 0 ? name : `${name} (+${count(layers, 'layer')})`,
+      String(row.number),
+      String(row.sampleCount),
+      row.notes,
+      row.spacing,
+      formatDuration(row.seconds),
+      `${row.name}${layers}`,
     ])
   }
 
-  const parts = [
-    `Version ${set.version}`,
-    count(set.instruments.length, 'instrument'),
-    count(sampleCount, 'sample'),
-    `${formatDuration(seconds)} of audio`,
-  ]
-  if (set.poolEntries > 0) {
-    parts.push(`${count(set.poolEntries, 'shared sound')} in the sample pool`)
-  }
-  const header = parts.join(' · ')
+  const header = describeSummary(summary)
   return [fileName, header, '', ...formatTable(table)].join('\n')
 }
 

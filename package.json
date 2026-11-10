@@ -27,7 +27,7 @@
     "verify": "bun run tsc && bun run lint && bun run fmt:check && bun test",
     "inspect": "bun packages/cli/src/main.ts inspect",
     "extract": "bun packages/cli/src/main.ts extract",
-    "web": "bun packages/web/index.html",
+    "web": "bun packages/web/scripts/dev.ts",
     "web:build": "bun packages/web/scripts/build.ts"
   }
 }

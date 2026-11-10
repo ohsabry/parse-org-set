@@ -1,7 +1,8 @@
 /**
  * Builds the page into packages/web/dist, ready for GitHub Pages: bundles and
- * minifies it, adds the Content-Security-Policy, and copies robots.txt and
- * sitemap.xml.
+ * minifies it, builds the worker as its own file (worker.js, which Bun's HTML
+ * bundling doesn't do), adds the Content-Security-Policy, and copies
+ * robots.txt and sitemap.xml.
  *
  * The policy is added here, not written in index.html, because Bun's dev
  * server (`bun run web`) injects an inline script for live reloading, which
@@ -25,22 +26,31 @@ const POLICY = [
   "base-uri 'none'",
   "form-action 'none'",
   "require-trusted-types-for 'script'",
+  // The one Trusted Types policy allowed: main.ts's, which approves only worker.js.
+  'trusted-types worker',
 ].join('; ')
 
 const root = join(import.meta.dir, '..')
 const out = join(root, 'dist')
 rmSync(out, { recursive: true, force: true })
 
-const result = await Bun.build({
-  entrypoints: [join(root, 'index.html')],
-  outdir: out,
-  minify: true,
-})
-if (!result.success) {
-  for (const log of result.logs) {
-    console.error(log)
+const builds = [
+  await Bun.build({ entrypoints: [join(root, 'index.html')], outdir: out, minify: true }),
+  // A fixed name, so main.ts can find it.
+  await Bun.build({
+    entrypoints: [join(root, 'src/worker.ts')],
+    outdir: out,
+    minify: true,
+    naming: 'worker.js',
+  }),
+]
+for (const result of builds) {
+  if (!result.success) {
+    for (const log of result.logs) {
+      console.error(log)
+    }
+    process.exit(1)
   }
-  process.exit(1)
 }
 
 const htmlPath = join(out, 'index.html')
