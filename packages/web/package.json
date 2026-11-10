@@ -9,6 +9,7 @@
     "fflate": "0.8.3"
   },
   "devDependencies": {
+    "@parse-org-set/test-fixtures": "workspace:*",
     "playwright": "1.64.1"
   }
 }

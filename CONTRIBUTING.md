@@ -28,7 +28,7 @@ The web page also has browser tests, which build it and run it in Chromium, Fire
     cd packages/web && bunx playwright install chromium firefox webkit && cd ../..
     bun run test:e2e
 
-The tests use fake files built in code (`packages/core/test/fixtures/fake-sets.ts`): one per
+The tests use fake files built in code (`packages/test-fixtures/src/fake-sets.ts`): one per
 version and case the parser supports. The smoke checks and the browser tests run on all of them.
 To try them by hand, write them to a folder outside the repo:
 
@@ -43,4 +43,6 @@ run the smoke checks on a real file you have locally:
 
 - `packages/core`: parsing and conversion, with no dependencies. Runs in Bun and browsers.
 - `packages/cli`: the `parse-org-set` command, published to npm as `@parse-org-set/cli`.
+- `packages/web`: the web page.
+- `packages/test-fixtures`: the fake files every package's tests use (never published).
 - [`docs/format.md`](docs/format.md): what's known about the file formats.

@@ -1,6 +1,6 @@
 import { toAscii } from './ascii'
 import { noteLabel } from './notes'
-import type { Loop, Sample, SetFile } from './types'
+import type { Loop, Sample, OrgFile } from './types'
 
 /** Every file to write, plus the index.json contents. */
 export interface ExtractionPlan {
@@ -136,7 +136,7 @@ export function sampleFileName(
  * The name to show for an instrument. A .Set's first instrument is named "-"
  * (or "Constant" in 1.4.9); we call it Shots. An .Instrument file has no Shots.
  */
-export function instrumentLabel(set: SetFile, position: number): string {
+export function instrumentLabel(set: OrgFile, position: number): string {
   const name = set.instruments[position]?.name ?? ''
   return set.fileType === 'set' && position === 0 ? 'Shots' : name
 }
@@ -162,7 +162,7 @@ export function defaultOutputFolder(
  */
 export function planExtraction(
   sourceName: string,
-  set: SetFile,
+  set: OrgFile,
   options: NameOptions = {},
 ): ExtractionPlan {
   const files: PlannedFile[] = []

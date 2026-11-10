@@ -7,12 +7,7 @@
  * consistent, not that our reading is right; real files stay the ground truth.
  * `bun run fixtures <folder>` writes them to disk to try by hand.
  */
-import {
-  buildInstrumentFile,
-  buildSet,
-  type FakeInstrument,
-  type FakeSample,
-} from '../helpers/build-set'
+import { buildInstrumentFile, buildSet, type FakeInstrument, type FakeSample } from './build-set'
 
 export interface FakeFile {
   name: string

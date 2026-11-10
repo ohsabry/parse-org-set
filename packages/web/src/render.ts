@@ -7,7 +7,7 @@ import {
   describeSummary,
   formatDuration,
   instrumentTitle,
-  type SetSummary,
+  type OrgFileSummary,
 } from '@parse-org-set/core'
 
 function element<T extends HTMLElement>(selector: string): T {
@@ -35,7 +35,7 @@ export function hideResult(): void {
   result.hidden = true
 }
 
-export function showSummary(name: string, summary: SetSummary): void {
+export function showSummary(name: string, summary: OrgFileSummary): void {
   fileName.textContent = name
   // Each part ("4 min 43 s of audio") stays on one line; lines break between parts.
   const parts: (Node | string)[] = []

@@ -1,10 +1,10 @@
 import { formatDuration, totalSeconds } from './durations'
 import { instrumentLabel } from './extraction'
 import { describeSpacing, noteRange } from './notes'
-import type { Sample, SetFile } from './types'
+import type { Sample, OrgFile } from './types'
 
 /** What `inspect` and the web page show about a file, before any formatting. */
-export interface SetSummary {
+export interface OrgFileSummary {
   version: string
   /** Including every instrument's extra layers. */
   sampleCount: number
@@ -30,7 +30,7 @@ export interface InstrumentSummary {
   seconds: number
 }
 
-export function summarizeSet(set: SetFile): SetSummary {
+export function summarizeOrgFile(set: OrgFile): OrgFileSummary {
   const instruments: InstrumentSummary[] = []
   let sampleCount = 0
   let seconds = 0
@@ -61,7 +61,7 @@ export function summarizeSet(set: SetFile): SetSummary {
 }
 
 /** "Version 1.10 · 12 instruments · 258 samples · 4 min 43 s of audio", plus the pool if there is one. */
-export function describeSummary(summary: SetSummary): string {
+export function describeSummary(summary: OrgFileSummary): string {
   const parts = [
     `Version ${summary.version}`,
     count(summary.instruments.length, 'instrument'),

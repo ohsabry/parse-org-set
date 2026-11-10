@@ -4,14 +4,14 @@
  * and keeps it, to build the zip when asked.
  */
 import {
-  SetFormatError,
+  OrgFormatError,
   defaultOutputFolder,
-  parseSet,
+  parseOrgFile,
   planExtraction,
   planSimpleExtraction,
-  summarizeSet,
+  summarizeOrgFile,
   type ExtractionPlan,
-  type SetFile,
+  type OrgFile,
 } from '@parse-org-set/core'
 
 import type { DownloadSize, PageRequest, WorkerReply, ZipOptions } from './protocol'
@@ -23,7 +23,7 @@ import { zipExtraction, zipSize } from './zip'
 const scope = self as unknown as Pick<Worker, 'postMessage' | 'addEventListener'>
 
 /** The file open right now, kept for building its zip. */
-let current: { fileName: string; bytes: Uint8Array; set: SetFile } | undefined
+let current: { fileName: string; bytes: Uint8Array; set: OrgFile } | undefined
 /**
  * Counts open requests. Reading a file takes a while, so a big file picked
  * first can finish after a small one picked next; only the latest request's
@@ -52,13 +52,13 @@ async function open(file: File): Promise<void> {
     if (request !== latestOpen) {
       return // another file was picked meanwhile
     }
-    const set = parseSet(bytes)
+    const set = parseOrgFile(bytes)
     current = { fileName: file.name, bytes, set }
     const sizes = {
       all: sizeOf({ simple: false, ascii: false }),
       simple: sizeOf({ simple: true, ascii: false }),
     }
-    reply({ type: 'opened', fileName: file.name, summary: summarizeSet(set), sizes })
+    reply({ type: 'opened', fileName: file.name, summary: summarizeOrgFile(set), sizes })
   } catch (error) {
     if (request === latestOpen) {
       fail(error, `Couldn't read ${file.name}`)
@@ -113,7 +113,7 @@ function sizeOf(options: ZipOptions): DownloadSize {
 
 /** A file that doesn't fit the format, or a zip that's too big, says why. Anything else is a bug. */
 function fail(error: unknown, context: string): void {
-  const expected = error instanceof SetFormatError || error instanceof RangeError
+  const expected = error instanceof OrgFormatError || error instanceof RangeError
   if (!expected) {
     console.error(error)
   }

@@ -1,4 +1,4 @@
-import { SetFormatError } from './errors/set-format-error'
+import { OrgFormatError } from './errors/org-format-error'
 import type { ByteReader } from './reader'
 import type { PoolEntry, Sample } from './types'
 
@@ -69,7 +69,7 @@ export function readSample(
   const offset = reader.offset
   const located = locate(reader, offset, pool, layout)
   if (typeof located === 'string') {
-    throw new SetFormatError(`No valid sample at offset ${offset}: ${located}`, offset)
+    throw new OrgFormatError(`No valid sample at offset ${offset}: ${located}`, offset)
   }
 
   const rootNote = reader.u8() // R+0

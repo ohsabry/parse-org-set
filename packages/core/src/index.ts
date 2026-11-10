@@ -1,5 +1,5 @@
 export { formatDuration, totalSeconds } from './durations'
-export { SetFormatError } from './errors/set-format-error'
+export { OrgFormatError } from './errors/org-format-error'
 export {
   defaultOutputFolder,
   indexJson,
@@ -12,15 +12,15 @@ export {
   type PlannedFile,
 } from './extraction'
 export { describeSpacing, noteLabel, noteRange } from './notes'
-export { parseSet } from './parse-set'
+export { parseOrgFile } from './parse-org-file'
 export { planSimpleExtraction } from './simple'
 export {
   count,
   describeSummary,
   instrumentTitle,
-  summarizeSet,
+  summarizeOrgFile,
   type InstrumentSummary,
-  type SetSummary,
+  type OrgFileSummary,
 } from './summary'
 export type {
   Envelope,
@@ -30,6 +30,6 @@ export type {
   Loop,
   PoolEntry,
   Sample,
-  SetFile,
+  OrgFile,
 } from './types'
 export { encodeWav, wavHeader, type WavAudio } from './wav'

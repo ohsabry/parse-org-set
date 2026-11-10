@@ -1,4 +1,4 @@
-import { SetFormatError } from './errors/set-format-error'
+import { OrgFormatError } from './errors/org-format-error'
 import type { ByteReader } from './reader'
 import type { PoolEntry } from './types'
 import { startsWith } from './utils'
@@ -32,7 +32,7 @@ export interface FileHeader {
 
 /**
  * Reads the file header: title, version, the sample pool (if any), and where
- * the first instrument starts. Throws SetFormatError if it isn't a .Set or
+ * the first instrument starts. Throws OrgFormatError if it isn't a .Set or
  * .Instrument file, or uses a version we don't support.
  *
  * An .Instrument file is a 32-byte title ("Music Studio Instrument") followed
@@ -48,7 +48,7 @@ export interface FileHeader {
  */
 export function readFileHeader(reader: ByteReader): FileHeader {
   if (reader.length < 36) {
-    throw new SetFormatError(
+    throw new OrgFormatError(
       `Too short to be a .Set or .Instrument file (${reader.length} bytes)`,
       0,
     )
@@ -56,7 +56,7 @@ export function readFileHeader(reader: ByteReader): FileHeader {
   reader.seek(0)
   const title = reader.utf8(32).toLowerCase()
   if (title !== SET_TITLE && title !== INSTRUMENT_TITLE) {
-    throw new SetFormatError(
+    throw new OrgFormatError(
       `Not a .Set or .Instrument file: it starts with ${JSON.stringify(title)}`,
       0,
     )
@@ -66,7 +66,7 @@ export function readFileHeader(reader: ByteReader): FileHeader {
   // A .Set's version record is short; an instrument header also holds the name.
   const maxLength = title === SET_TITLE ? 64 : 1024
   if (textLength > maxLength || 36 + textLength > reader.length) {
-    throw new SetFormatError(`Text length ${textLength} at offset 32 doesn't make sense`, 32)
+    throw new OrgFormatError(`Text length ${textLength} at offset 32 doesn't make sense`, 32)
   }
   const text = reader.bytes(textLength)
 
@@ -89,14 +89,14 @@ export function readFileHeader(reader: ByteReader): FileHeader {
   // The text field: 1 byte per character before 1.4, 2 bytes from 1.4 on.
   const fieldAt = 36 + textLength + VERSION_TO_TEXT_FIELD
   if (fieldAt + 4 > reader.length) {
-    throw new SetFormatError('The file header is cut off', fieldAt)
+    throw new OrgFormatError('The file header is cut off', fieldAt)
   }
   reader.seek(fieldAt)
   const characters = reader.u32()
   const bytesPerCharacter = version.startsWith('1.4.') ? 2 : 1
   const poolAt = reader.offset + characters * bytesPerCharacter + TEXT_FIELD_TO_POOL
   if (characters > 4096 || poolAt + 4 > reader.length) {
-    throw new SetFormatError(`Text field length ${characters} doesn't make sense`, fieldAt)
+    throw new OrgFormatError(`Text field length ${characters} doesn't make sense`, fieldAt)
   }
   reader.seek(poolAt)
 
@@ -107,7 +107,7 @@ export function readFileHeader(reader: ByteReader): FileHeader {
 
 function checkVersion(version: string): void {
   if (!SUPPORTED.test(version)) {
-    throw new SetFormatError(
+    throw new OrgFormatError(
       `Version ${JSON.stringify(version)} isn't supported (only 1.10 and 1.2.x to 1.4.x)`,
       36,
     )
@@ -193,7 +193,7 @@ function findInstruments(
 
   const found = indexOf(reader, marker, searchFrom, searchFrom + MAX_SEARCH)
   if (found === undefined || found + marker.length + 4 > reader.length) {
-    throw new SetFormatError("Couldn't find where the instruments start", searchFrom)
+    throw new OrgFormatError("Couldn't find where the instruments start", searchFrom)
   }
   reader.seek(found + marker.length)
   const instrumentCount = reader.u32()

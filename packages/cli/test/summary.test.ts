@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import type { Sample, SetFile } from '@parse-org-set/core'
+import type { Sample, OrgFile } from '@parse-org-set/core'
 
 import { formatSummary } from '../src/summary'
 
@@ -19,7 +19,7 @@ function sample(rootNote: number, frames: number, sampleRate: number): Sample {
   }
 }
 
-const set: SetFile = {
+const set: OrgFile = {
   fileType: 'set',
   version: '1.3.1',
   trailerOffset: 0,
@@ -73,7 +73,7 @@ describe('formatSummary', () => {
 })
 
 test('counts layers in the samples, labels them, and mentions the sample pool', () => {
-  const layered: SetFile = {
+  const layered: OrgFile = {
     ...set,
     poolEntries: 3,
     instruments: [

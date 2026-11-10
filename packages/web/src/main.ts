@@ -162,7 +162,13 @@ drop.addEventListener('dragleave', () => drop.classList.remove('over'))
 drop.addEventListener('drop', (event) => {
   event.preventDefault()
   drop.classList.remove('over')
-  open(event.dataTransfer?.files[0])
+  const files = event.dataTransfer?.files
+  if (files !== undefined && files.length > 0) {
+    // Show the dropped file in the picker too. Setting files this way doesn't
+    // fire "change", so the file isn't opened twice.
+    input.files = files
+  }
+  open(files?.[0])
 })
 
 // A file dropped anywhere else would make the browser leave the page to open

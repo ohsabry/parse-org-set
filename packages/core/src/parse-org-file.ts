@@ -1,5 +1,5 @@
+import { OrgFormatError } from './errors/org-format-error'
 import { OutOfBoundsError } from './errors/out-of-bounds-error'
-import { SetFormatError } from './errors/set-format-error'
 import { readFileHeader } from './file-header'
 import { readInstrumentSettings } from './instrument-settings'
 import { ByteReader } from './reader'
@@ -10,7 +10,7 @@ import {
   sampleProblem,
   type SampleLayout,
 } from './sample'
-import type { Instrument, PoolEntry, Sample, SetFile } from './types'
+import type { Instrument, PoolEntry, Sample, OrgFile } from './types'
 import { startsWith } from './utils'
 
 /** One header and its samples, before layers are grouped under their instrument. */
@@ -27,7 +27,7 @@ interface Group {
 /**
  * Parses a .Set or .Instrument file, version 1.10 or 1.2.x to 1.4.x. Audio isn't copied: each
  * sample says where its audio is in `bytes`, either right after its header or
- * in the file's sample pool. Throws SetFormatError if the bytes don't fit.
+ * in the file's sample pool. Throws OrgFormatError if the bytes don't fit.
  *
  * The file header says where the first instrument starts. From there the
  * file is walked header by header:
@@ -40,20 +40,20 @@ interface Group {
  * 4. When no valid sample is left, the remaining bytes are the trailer.
  * Headers with only a name are layers, grouped under the instrument before.
  */
-export function parseSet(bytes: Uint8Array): SetFile {
+export function parseOrgFile(bytes: Uint8Array): OrgFile {
   try {
     return walk(new ByteReader(bytes))
   } catch (error) {
     // Every read is bounds-checked; one that runs off the end means the file
-    // doesn't fit the format either, so callers only ever see SetFormatError.
+    // doesn't fit the format either, so callers only ever see OrgFormatError.
     if (error instanceof OutOfBoundsError) {
-      throw new SetFormatError(`The file ends too early: ${error.message}`, error.offset)
+      throw new OrgFormatError(`The file ends too early: ${error.message}`, error.offset)
     }
     throw error
   }
 }
 
-function walk(reader: ByteReader): SetFile {
+function walk(reader: ByteReader): OrgFile {
   const { fileType, version, firstInstrumentOffset, pool } = readFileHeader(reader)
   // Instrument texts end with the version: "Oud\r1.3.1\r" or "Oud\r1.4.9".
   const ending = new TextEncoder().encode(
@@ -68,7 +68,7 @@ function walk(reader: ByteReader): SetFile {
     if (firstSample === undefined) {
       const orphan = namedHeaderAt(reader, at)
       if (orphan !== undefined) {
-        throw new SetFormatError(
+        throw new OrgFormatError(
           `Instrument ${JSON.stringify(orphan)} at ${at} has no samples after it; the file may be cut off`,
           at,
         )
@@ -83,7 +83,7 @@ function walk(reader: ByteReader): SetFile {
   }
 
   if (groups.length === 0) {
-    throw new SetFormatError('No samples found', firstInstrumentOffset)
+    throw new OrgFormatError('No samples found', firstInstrumentOffset)
   }
   return {
     fileType,
@@ -200,7 +200,7 @@ function readGroup(
   const textLength = reader.u32()
   // The text, then at least the sample count byte, must fit in the header.
   if (headerOffset + 4 + textLength >= end) {
-    throw new SetFormatError(
+    throw new OrgFormatError(
       `Instrument header at ${headerOffset} has a text length (${textLength}) that runs past its end at ${end}`,
       headerOffset,
     )
@@ -226,11 +226,11 @@ function readGroup(
       samples.push(readSample(reader, pool, layout))
     } catch (error) {
       // A sample that doesn't fit gets context; anything else is a bug.
-      if (!(error instanceof SetFormatError || error instanceof OutOfBoundsError)) {
+      if (!(error instanceof OrgFormatError || error instanceof OutOfBoundsError)) {
         throw error
       }
       const reason = error.message
-      throw new SetFormatError(
+      throw new OrgFormatError(
         `Instrument ${JSON.stringify(name)} at ${headerOffset} says ${count} samples follow, but sample ${i + 1} doesn't fit: ${reason}`,
         reader.offset,
       )

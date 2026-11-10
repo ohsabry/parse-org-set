@@ -32,7 +32,8 @@
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
-    "@parse-org-set/core": "workspace:*"
+    "@parse-org-set/core": "workspace:*",
+    "@parse-org-set/test-fixtures": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

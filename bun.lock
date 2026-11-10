@@ -25,10 +25,18 @@
       },
       "devDependencies": {
         "@parse-org-set/core": "workspace:*",
+        "@parse-org-set/test-fixtures": "workspace:*",
       },
     },
     "packages/core": {
       "name": "@parse-org-set/core",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@parse-org-set/test-fixtures": "workspace:*",
+      },
+    },
+    "packages/test-fixtures": {
+      "name": "@parse-org-set/test-fixtures",
       "version": "0.0.0",
     },
     "packages/web": {
@@ -39,6 +47,7 @@
         "fflate": "0.8.3",
       },
       "devDependencies": {
+        "@parse-org-set/test-fixtures": "workspace:*",
         "playwright": "1.64.1",
       },
     },
@@ -81,6 +90,8 @@
     "@parse-org-set/cli": ["@parse-org-set/cli@workspace:packages/cli"],
 
     "@parse-org-set/core": ["@parse-org-set/core@workspace:packages/core"],
+
+    "@parse-org-set/test-fixtures": ["@parse-org-set/test-fixtures@workspace:packages/test-fixtures"],
 
     "@parse-org-set/web": ["@parse-org-set/web@workspace:packages/web"],
 

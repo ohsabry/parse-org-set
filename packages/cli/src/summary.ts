@@ -2,13 +2,13 @@ import {
   describeSummary,
   formatDuration,
   instrumentTitle,
-  summarizeSet,
-  type SetFile,
+  summarizeOrgFile,
+  type OrgFile,
 } from '@parse-org-set/core'
 
 /** What `inspect` prints: a header line, then one row per instrument. */
-export function formatSummary(fileName: string, set: SetFile): string {
-  const summary = summarizeSet(set)
+export function formatSummary(fileName: string, set: OrgFile): string {
+  const summary = summarizeOrgFile(set)
   const table: string[][] = [['#', 'Samples', 'Notes', 'Spacing', 'Duration', 'Instrument']]
   for (const row of summary.instruments) {
     table.push([

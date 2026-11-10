@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 
-import { SetFormatError } from '../src/index'
+import { buildSample, type FakeSample } from '@parse-org-set/test-fixtures'
+import { OrgFormatError } from '../src/index'
 import { ByteReader } from '../src/reader'
 import { readSample, sampleProblem } from '../src/sample'
 import { SAMPLE_HEADERS } from './fixtures/real-bytes'
-import { buildSample, type FakeSample } from './helpers/build-set'
 
 /** Real sample header bytes, then silent audio of the given size. */
 function withAudio(header: Uint8Array, audioLength: number): Uint8Array {
@@ -105,10 +105,10 @@ describe('sampleProblem', () => {
     expect(reader.offset).toBe(5)
   })
 
-  test('readSample throws SetFormatError with the offset and the reason', () => {
+  test('readSample throws OrgFormatError with the offset and the reason', () => {
     const reader = new ByteReader(new Uint8Array(300))
     reader.seek(100)
-    expect(() => readSample(reader)).toThrow(SetFormatError)
+    expect(() => readSample(reader)).toThrow(OrgFormatError)
     expect(() => readSample(reader)).toThrow('No valid sample at offset 100: byte R+1')
   })
 })

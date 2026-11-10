@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { buildSet } from '../../core/test/helpers/build-set'
+import { buildSet } from '@parse-org-set/test-fixtures'
 
 // Runs the real command in a separate process, the way a user would.
 const main = join(import.meta.dir, '../src/main.ts')

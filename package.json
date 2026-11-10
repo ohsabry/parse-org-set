@@ -22,7 +22,7 @@
     "fmt:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "tsc": "tsc -p packages/core && tsc -p packages/core/test && tsc -p packages/cli && tsc -p packages/cli/test && tsc -p packages/web && tsc -p packages/web/test && tsc -p packages/web/scripts && tsc -p packages/web/e2e",
+    "tsc": "tsc -p packages/core && tsc -p packages/core/test && tsc -p packages/cli && tsc -p packages/cli/test && tsc -p packages/web && tsc -p packages/web/test && tsc -p packages/web/scripts && tsc -p packages/web/e2e && tsc -p packages/test-fixtures",
     "test": "bun test",
     "verify": "bun run tsc && bun run lint && bun run fmt:check && bun test",
     "inspect": "bun packages/cli/src/main.ts inspect",
@@ -30,6 +30,6 @@
     "web": "bun packages/web/scripts/dev.ts",
     "web:build": "bun packages/web/scripts/build.ts",
     "test:e2e": "bun run web:build && bun test ./packages/web/e2e/page.e2e.ts",
-    "fixtures": "bun packages/core/test/fixtures/write-fake-sets.ts"
+    "fixtures": "bun packages/test-fixtures/src/write-fake-sets.ts"
   }
 }

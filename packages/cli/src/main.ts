@@ -1,13 +1,13 @@
 #!/usr/bin/env bun
 import { basename } from 'node:path'
 import {
-  SetFormatError,
+  OrgFormatError,
   count,
   defaultOutputFolder,
-  parseSet,
+  parseOrgFile,
   planExtraction,
   planSimpleExtraction,
-  type SetFile,
+  type OrgFile,
 } from '@parse-org-set/core'
 
 import { ExtractError } from './errors/extract-error'
@@ -45,7 +45,7 @@ async function main(args: string[]): Promise<number> {
     return 1
   }
 
-  const loaded = await loadSet(path)
+  const loaded = await loadOrgFile(path)
   if (loaded === undefined) {
     return 1
   }
@@ -87,9 +87,9 @@ async function main(args: string[]): Promise<number> {
  * Reads and parses a .Set or .Instrument file. Prints a one-line error and returns undefined
  * if the file is missing, unreadable or not a supported .Set or .Instrument.
  */
-async function loadSet(
+async function loadOrgFile(
   path: string,
-): Promise<{ bytes: Uint8Array; set: SetFile; fileName: string } | undefined> {
+): Promise<{ bytes: Uint8Array; set: OrgFile; fileName: string } | undefined> {
   const file = Bun.file(path)
   if (!(await file.exists())) {
     console.error(`No such file: ${path}`)
@@ -107,11 +107,11 @@ async function loadSet(
   }
 
   try {
-    return { bytes, set: parseSet(bytes), fileName: basename(path) }
+    return { bytes, set: parseOrgFile(bytes), fileName: basename(path) }
   } catch (error) {
     // Expected problems with the file get a one-line message; anything else
     // is a bug, so let it crash with a stack trace.
-    if (error instanceof SetFormatError) {
+    if (error instanceof OrgFormatError) {
       console.error(`${path}: ${error.message}`)
       return undefined
     }

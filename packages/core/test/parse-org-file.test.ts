@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 
-import { parseSet, planExtraction } from '../src/index'
 import {
   buildInstrumentFile,
   buildSet,
   type FakeInstrument,
   type FakeSample,
-} from './helpers/build-set'
+} from '@parse-org-set/test-fixtures'
+import { parseOrgFile, planExtraction } from '../src/index'
 
 const mono = (name: string, rootNote: number, frames: number): FakeSample => ({
   name,
@@ -27,10 +27,10 @@ const instruments: FakeInstrument[] = [
   { name: 'GENERAL', samples: [mono('36 Bass Drum', 36, 4)], settingsLength: 0 },
 ]
 
-describe('parseSet', () => {
+describe('parseOrgFile', () => {
   test('walks every instrument, whatever the size of its undecoded settings', () => {
     const bytes = buildSet({ instruments })
-    const set = parseSet(bytes)
+    const set = parseOrgFile(bytes)
     expect(set.version).toBe('1.3.1')
     expect(set.instruments.map((i) => i.name)).toEqual(['-', 'Oud', 'GENERAL'])
     const names: string[][] = []
@@ -49,7 +49,7 @@ describe('parseSet', () => {
     // The shape both real trailers start with: length 7, "\r1.3.1\r", ff ff.
     const start = [7, 0, 0, 0, ...new TextEncoder().encode('\r1.3.1\r'), 0xff, 0xff]
     const set = buildSet({ instruments })
-    const parsed = parseSet(new Uint8Array([...set, ...start, ...new Uint8Array(200)]))
+    const parsed = parseOrgFile(new Uint8Array([...set, ...start, ...new Uint8Array(200)]))
     expect(parsed.instruments).toHaveLength(3)
     expect(parsed.trailerOffset).toBe(set.length)
   })
@@ -57,7 +57,7 @@ describe('parseSet', () => {
   test('bytes after the last sample are the trailer', () => {
     const set = buildSet({ instruments })
     const withTrailer = new Uint8Array([...set, ...new Uint8Array(300).fill(0xab)])
-    const parsed = parseSet(withTrailer)
+    const parsed = parseOrgFile(withTrailer)
     expect(parsed.instruments).toHaveLength(3)
     expect(parsed.trailerOffset).toBe(set.length)
   })
@@ -65,7 +65,7 @@ describe('parseSet', () => {
 
 describe('instrument settings', () => {
   test('a header with only a name is a layer of the instrument before it', () => {
-    const set = parseSet(
+    const set = parseOrgFile(
       buildSet({
         instruments: [
           { name: '-', samples: [mono('click', 0, 4)] },
@@ -79,7 +79,7 @@ describe('instrument settings', () => {
   })
 
   test('a header too short to hold the settings has no kind or envelope', () => {
-    const set = parseSet(
+    const set = parseOrgFile(
       buildSet({ instruments: [{ name: '-', samples: [mono('click', 0, 4)], settingsLength: 0 }] }),
     )
     expect(set.instruments[0]?.kind).toBeUndefined()
@@ -87,7 +87,7 @@ describe('instrument settings', () => {
   })
 
   test('a type value never seen in real files gives undefined, not a guess', () => {
-    const set = parseSet(
+    const set = parseOrgFile(
       buildSet({ instruments: [{ name: '-', samples: [mono('click', 0, 4)], kind: 7 }] }),
     )
     expect(set.instruments[0]?.kind).toBeUndefined()
@@ -116,7 +116,7 @@ describe('sample pools, layers and empty instruments', () => {
         },
       ],
     })
-    const set = parseSet(bytes)
+    const set = parseOrgFile(bytes)
     const view = new DataView(bytes.buffer)
     const [a, inline, c] = set.instruments[0]?.samples ?? []
     expect(set.poolEntries).toBe(1)
@@ -128,7 +128,7 @@ describe('sample pools, layers and empty instruments', () => {
   })
 
   test('an empty instrument does not swallow the one after it', () => {
-    const set = parseSet(
+    const set = parseOrgFile(
       buildSet({
         instruments: [
           { name: '-', samples: [mono('click', 0, 4)] },
@@ -143,16 +143,16 @@ describe('sample pools, layers and empty instruments', () => {
   })
 })
 
-describe('parseSet on broken files', () => {
+describe('parseOrgFile on broken files', () => {
   /** The offset of the Shots header's sample-count byte: just before its first sample. */
   function shotsCountByte(bytes: Uint8Array): number {
-    return (parseSet(bytes).instruments[0]?.samples[0]?.offset ?? 0) - 1
+    return (parseOrgFile(bytes).instruments[0]?.samples[0]?.offset ?? 0) - 1
   }
 
   test('a header that promises more samples than follow', () => {
     const bytes = buildSet({ instruments: instruments.slice(0, 1) })
     bytes[shotsCountByte(bytes)] = 3
-    expect(() => parseSet(bytes)).toThrow(
+    expect(() => parseOrgFile(bytes)).toThrow(
       /Instrument "-" at \d+ says 3 samples follow, but sample 3/,
     )
   })
@@ -161,13 +161,13 @@ describe('parseSet on broken files', () => {
     const bytes = buildSet({ instruments: instruments.slice(0, 1) })
     bytes[shotsCountByte(bytes)] = 1
     // The second sample is then read as if it were an instrument header.
-    expect(() => parseSet(bytes)).toThrow('runs past its end')
+    expect(() => parseOrgFile(bytes)).toThrow('runs past its end')
   })
 
   test('a file cut off in the middle of an instrument', () => {
     // Without GENERAL, the file ends with the Oud's third sample; cut into it.
     const bytes = buildSet({ instruments: instruments.slice(0, 2) })
-    expect(() => parseSet(bytes.subarray(0, bytes.length - 1))).toThrow(
+    expect(() => parseOrgFile(bytes.subarray(0, bytes.length - 1))).toThrow(
       /Instrument "Oud" at \d+ says 3 samples follow, but sample 3/,
     )
   })
@@ -175,18 +175,18 @@ describe('parseSet on broken files', () => {
   test('a file cut off inside the only sample of the last instrument', () => {
     // GENERAL's one sample no longer fits, so no valid sample follows its header.
     const bytes = buildSet({ instruments })
-    expect(() => parseSet(bytes.subarray(0, bytes.length - 1))).toThrow('Instrument "GENERAL"')
+    expect(() => parseOrgFile(bytes.subarray(0, bytes.length - 1))).toThrow('Instrument "GENERAL"')
   })
 
   test('a file header with no instruments after it', () => {
-    expect(() => parseSet(buildSet({ instruments: [] }))).toThrow('No samples found')
+    expect(() => parseOrgFile(buildSet({ instruments: [] }))).toThrow('No samples found')
   })
 })
 
-describe('parseSet on 1.10 files', () => {
+describe('parseOrgFile on 1.10 files', () => {
   test('walks a set whose samples use both 1.10 name styles', () => {
     const at = (rate: number, sample: FakeSample): FakeSample => ({ ...sample, rate })
-    const set = parseSet(
+    const set = parseOrgFile(
       buildSet({
         version: '1.10',
         instruments: [
@@ -217,7 +217,7 @@ describe('parseSet on 1.10 files', () => {
   })
 })
 
-describe('parseSet on .Instrument files', () => {
+describe('parseOrgFile on .Instrument files', () => {
   const accordion: FakeInstrument = {
     name: 'Accordion A MT',
     samples: [
@@ -235,7 +235,7 @@ describe('parseSet on .Instrument files', () => {
 
   test('a 1.10 file holds one instrument and nothing after it', () => {
     const bytes = buildInstrumentFile(accordion, '1.10')
-    const set = parseSet(bytes)
+    const set = parseOrgFile(bytes)
     expect(set.fileType).toBe('instrument')
     expect(set.version).toBe('1.10')
     expect(set.instruments.map((i) => i.name)).toEqual(['Accordion A MT'])
@@ -248,7 +248,7 @@ describe('parseSet on .Instrument files', () => {
   })
 
   test('a 1.2.8 file reads the same way, with later-style samples', () => {
-    const set = parseSet(buildInstrumentFile(plain, '1.2.8'))
+    const set = parseOrgFile(buildInstrumentFile(plain, '1.2.8'))
     expect(set.version).toBe('1.2.8')
     expect(set.instruments[0]?.samples.map((s) => s.name)).toEqual(['AC1C4', 'AC1E4'])
   })
@@ -256,7 +256,7 @@ describe('parseSet on .Instrument files', () => {
   test('its one instrument is extracted under its own name, not as Shots', () => {
     const plan = planExtraction(
       'Accordion A MT.Instrument',
-      parseSet(buildInstrumentFile(accordion)),
+      parseOrgFile(buildInstrumentFile(accordion)),
     )
     expect(plan.files.map((f) => f.path)).toEqual([
       '01_Accordion_A_MT/001_C4_AC1C4.wav',
@@ -265,7 +265,7 @@ describe('parseSet on .Instrument files', () => {
   })
 
   test('rejects an unsupported version', () => {
-    expect(() => parseSet(buildInstrumentFile(plain, '1.5.0'))).toThrow(
+    expect(() => parseOrgFile(buildInstrumentFile(plain, '1.5.0'))).toThrow(
       `Version "1.5.0" isn't supported`,
     )
   })

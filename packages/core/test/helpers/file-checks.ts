@@ -7,12 +7,12 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
 
 import { readFileHeader } from '../../src/file-header'
-import { parseSet, planExtraction, type Sample, type SetFile } from '../../src/index'
+import { parseOrgFile, planExtraction, type Sample, type OrgFile } from '../../src/index'
 import { ByteReader } from '../../src/reader'
 
 interface Loaded {
   bytes: Uint8Array
-  set: SetFile
+  set: OrgFile
   samples: Sample[]
 }
 
@@ -32,7 +32,7 @@ export function describeFileChecks(
 
     beforeAll(async () => {
       const bytes = await load()
-      const set = parseSet(bytes)
+      const set = parseOrgFile(bytes)
       const samples: Sample[] = []
       for (const instrument of set.instruments) {
         samples.push(...instrument.samples)

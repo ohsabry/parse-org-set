@@ -1,4 +1,4 @@
-import type { SetSummary } from '@parse-org-set/core'
+import type { OrgFileSummary } from '@parse-org-set/core'
 
 // The messages the page and the worker send each other. postMessage copies
 // them with the structured clone algorithm, so they're plain data. A File or
@@ -26,7 +26,7 @@ export type WorkerReply =
   | {
       type: 'opened'
       fileName: string
-      summary: SetSummary
+      summary: OrgFileSummary
       /** For every sample, and with "Fewer files". */
       sizes: { all: DownloadSize; simple: DownloadSize }
     }

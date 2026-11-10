@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
-import { parseSet, planSimpleExtraction, type Sample } from '../src/index'
+import { buildSet, type FakeSample } from '@parse-org-set/test-fixtures'
+import { parseOrgFile, planSimpleExtraction, type Sample } from '../src/index'
 import { pickMelodicSample } from '../src/simple'
-import { buildSet, type FakeSample } from './helpers/build-set'
 
 function root(rootNote: number): Sample {
   return {
@@ -60,7 +60,7 @@ describe('planSimpleExtraction', () => {
       { name: 'Phrase', kind: 2, samples: [tone('0', 55, [7]), tone('1', 56, [8])] },
     ],
   })
-  const plan = planSimpleExtraction('x.Set', bytes, parseSet(bytes))
+  const plan = planSimpleExtraction('x.Set', bytes, parseOrgFile(bytes))
 
   test('drums keep every distinct sound, melodic keeps one sample, audio is left out', () => {
     const paths: string[] = []
@@ -80,7 +80,7 @@ describe('planSimpleExtraction', () => {
         { name: '-', kind: 1, samples: [tone('a', 36, [1, 2]), tone('b', 37, [2, 1])] },
       ],
     })
-    expect(planSimpleExtraction('x.Set', kit, parseSet(kit)).files.length).toBe(2)
+    expect(planSimpleExtraction('x.Set', kit, parseOrgFile(kit)).files.length).toBe(2)
   })
 
   test("a drum kit's layers are exported with the kit", () => {
@@ -91,7 +91,7 @@ describe('planSimpleExtraction', () => {
       ],
     })
     const paths: string[] = []
-    for (const file of planSimpleExtraction('x.Set', kit, parseSet(kit)).files) {
+    for (const file of planSimpleExtraction('x.Set', kit, parseOrgFile(kit)).files) {
       paths.push(file.path)
     }
     expect(paths).toEqual(['drums/01_Shots/001_C2_kick.wav', 'drums/01_Shots/002_C#2_breath.wav'])

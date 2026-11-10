@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Only ever used by tests and a script, which run in Bun.
+    "lib": ["ES2022", "DOM"],
+    "types": ["bun"]
+  },
+  "include": ["src"]
+}

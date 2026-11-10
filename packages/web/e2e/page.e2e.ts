@@ -15,16 +15,15 @@ import {
   defaultOutputFolder,
   formatDuration,
   instrumentTitle,
-  parseSet,
+  parseOrgFile,
   planExtraction,
   planSimpleExtraction,
-  summarizeSet,
+  summarizeOrgFile,
 } from '@parse-org-set/core'
+import { fakeFiles } from '@parse-org-set/test-fixtures'
+import { buildSet, type FakeSample } from '@parse-org-set/test-fixtures'
 import { unzipSync } from 'fflate'
 import { chromium, firefox, webkit, type Browser, type BrowserType, type Page } from 'playwright'
-
-import { fakeFiles } from '../../core/test/fixtures/fake-sets'
-import { buildSet, type FakeSample } from '../../core/test/helpers/build-set'
 
 const dist = join(import.meta.dir, '../dist')
 const server = Bun.serve({
@@ -78,7 +77,7 @@ afterAll(() => {
 /** The table rows the page should show for a file: core's summary, laid out as the page does. */
 function expectedRows(bytes: Uint8Array): string[][] {
   const rows: string[][] = []
-  for (const row of summarizeSet(parseSet(bytes)).instruments) {
+  for (const row of summarizeOrgFile(parseOrgFile(bytes)).instruments) {
     rows.push([
       String(row.number),
       row.sampleCount.toLocaleString('en-CA'),
@@ -181,6 +180,11 @@ for (const [name, type] of browsers) {
       await page.dispatchEvent('.drop', 'drop', { dataTransfer })
       await page.locator('#file-name', { hasText: fake.name }).waitFor({ timeout: 5000 })
       expect(await shownRows(page)).toEqual(expectedRows(fake.bytes))
+      // The picker shows the dropped file too.
+      const picked = await page
+        .locator('input[type=file]')
+        .evaluate((input: HTMLInputElement) => input.files?.[0]?.name)
+      expect(picked).toBe(fake.name)
       expect(problems).toEqual([])
     })
 
@@ -200,7 +204,7 @@ for (const [name, type] of browsers) {
         await page.locator('input[name=ascii]').setChecked(options.ascii)
 
         // The same plan the CLI's extract makes, with the same options.
-        const set = parseSet(fake.bytes)
+        const set = parseOrgFile(fake.bytes)
         const plan = options.simple
           ? planSimpleExtraction(fake.name, fake.bytes, set, { ascii: options.ascii })
           : planExtraction(fake.name, set, { ascii: options.ascii })

@@ -3,10 +3,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { parseSet, planExtraction, type ExtractionPlan } from '@parse-org-set/core'
+import { parseOrgFile, planExtraction, type ExtractionPlan } from '@parse-org-set/core'
+import { buildSet, type FakeSample } from '@parse-org-set/test-fixtures'
 import { unzipSync } from 'fflate'
 
-import { buildSet, type FakeSample } from '../../core/test/helpers/build-set'
 import { zipExtraction, zipSize } from '../src/zip'
 
 const tone = (name: string, rootNote: number, channels: 1 | 2, values: number[]): FakeSample => ({
@@ -24,7 +24,7 @@ const bytes = buildSet({
     { name: 'إسترينج 🎼', samples: [tone('MS000001', 52, 2, [100, -100, 200, -200])] },
   ],
 })
-const set = parseSet(bytes)
+const set = parseOrgFile(bytes)
 const plan = planExtraction('x.Set', set)
 const folder = 'x_samples'
 

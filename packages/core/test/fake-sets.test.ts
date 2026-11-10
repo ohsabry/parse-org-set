@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 
-import { parseSet } from '../src/index'
-import { fakeFiles } from './fixtures/fake-sets'
+import { fakeFiles } from '@parse-org-set/test-fixtures'
+import { parseOrgFile } from '../src/index'
 import { describeFileChecks } from './helpers/file-checks'
 
 for (const fake of fakeFiles()) {
   describe(fake.name, () => {
     test('holds what it was built to hold', () => {
-      const set = parseSet(fake.bytes)
+      const set = parseOrgFile(fake.bytes)
       let samples = 0
       let layers = 0
       for (const instrument of set.instruments) {

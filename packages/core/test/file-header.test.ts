@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 
+import { buildSet, type FakeSample } from '@parse-org-set/test-fixtures'
 import { readFileHeader } from '../src/file-header'
-import { SetFormatError } from '../src/index'
+import { OrgFormatError } from '../src/index'
 import { ByteReader } from '../src/reader'
 import { FILE_STARTS } from './fixtures/real-bytes'
-import { buildSet, type FakeSample } from './helpers/build-set'
 
 const tone = (name: string, rootNote: number, values: number[], poolId?: number): FakeSample => ({
   name,
@@ -103,7 +103,7 @@ describe('readFileHeader on things that are not .Set files', () => {
 
   test('rejects a file too short to hold a header', () => {
     expect(() => readFileHeader(new ByteReader(FILE_STARTS.v131.subarray(0, 20)))).toThrow(
-      SetFormatError,
+      OrgFormatError,
     )
   })
 

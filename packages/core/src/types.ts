@@ -1,5 +1,5 @@
-/** A parsed .Set file. Audio isn't copied: samples point into the original bytes. */
-export interface SetFile {
+/** A parsed .Set or .Instrument file. Audio isn't copied: samples point into the original bytes. */
+export interface OrgFile {
   /** 'set' for a .Set; 'instrument' for an .Instrument, which holds a single instrument. */
   fileType: 'set' | 'instrument'
   /** For example '1.3.1'. */

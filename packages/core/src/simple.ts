@@ -11,7 +11,7 @@ import {
   type PlannedFile,
 } from './extraction'
 import { noteLabel } from './notes'
-import type { Sample, SetFile } from './types'
+import type { Sample, OrgFile } from './types'
 
 const MIDDLE_C = 60
 
@@ -29,7 +29,7 @@ const MIDDLE_C = 60
 export function planSimpleExtraction(
   sourceName: string,
   bytes: Uint8Array,
-  set: SetFile,
+  set: OrgFile,
   options: NameOptions = {},
 ): ExtractionPlan {
   const files: PlannedFile[] = []

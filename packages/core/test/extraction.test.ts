@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { safeName } from '../src/extraction'
-import { defaultOutputFolder, planExtraction, type Sample, type SetFile } from '../src/index'
+import { defaultOutputFolder, planExtraction, type Sample, type OrgFile } from '../src/index'
 
 describe('safeName', () => {
   test('spaces become single underscores, and the ends are trimmed', () => {
@@ -49,7 +49,7 @@ describe('safeName', () => {
 })
 
 test('ascii mode: every path is plain ASCII', () => {
-  const arabic: SetFile = {
+  const arabic: OrgFile = {
     fileType: 'set',
     version: '1.3.1',
     trailerOffset: 0,
@@ -102,7 +102,7 @@ function sample(name: string, rootNote: number, frames: number): Sample {
   }
 }
 
-const set: SetFile = {
+const set: OrgFile = {
   fileType: 'set',
   version: '1.3.1',
   trailerOffset: 0,
@@ -155,7 +155,7 @@ describe('planExtraction', () => {
   })
 
   test('layers go in numbered subfolders of their instrument, and in the index', () => {
-    const layered: SetFile = {
+    const layered: OrgFile = {
       ...set,
       instruments: [
         {
@@ -186,7 +186,7 @@ describe('planExtraction', () => {
   })
 
   test('numbers get wider when there are more than 99 instruments', () => {
-    const many: SetFile = { ...set, instruments: [] }
+    const many: OrgFile = { ...set, instruments: [] }
     for (let i = 0; i < 120; i++) {
       many.instruments.push({
         name: `i${i}`,
