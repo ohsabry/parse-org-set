@@ -1,0 +1,10 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    // The browser tests run in Bun and drive browsers through Playwright;
+    // the DOM types are for the bits of code that run inside the page.
+    "lib": ["ES2022", "DOM"],
+    "types": ["bun"]
+  },
+  "include": ["."]
+}

@@ -22,6 +22,12 @@ Run the CLI from the source, with paths relative to the repo folder:
     bun run fmt      # format everything (Prettier)
     bun run lint:fix # fix what ESLint can
 
+The web page also has browser tests, which build it and run it in Chromium, Firefox and WebKit
+(Safari's engine) through Playwright. Install the browsers once, then run them:
+
+    cd packages/web && bunx playwright install chromium firefox webkit && cd ../..
+    bun run test:e2e
+
 The unit tests use small fake files built in code. To also check the parser against a real file
 you have locally:
 

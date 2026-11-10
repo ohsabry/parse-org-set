@@ -52,7 +52,7 @@ export default defineConfig(
       'import-x/no-extraneous-dependencies': [
         'error',
         // The CLI bundles core into its published file, so core is a dev dependency there.
-        { devDependencies: ['**/test/**', 'eslint.config.js', 'packages/cli/src/**'] },
+        { devDependencies: ['**/test/**', '**/e2e/**', 'eslint.config.js', 'packages/cli/src/**'] },
       ],
 
       '@typescript-eslint/no-explicit-any': 'error',

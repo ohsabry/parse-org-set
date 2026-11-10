@@ -27,3 +27,21 @@ jobs:
 
       # The bundle that gets published to npm.
       - run: bun run --cwd packages/cli build
+
+  # The built page in real browsers: Chromium, Firefox and WebKit (Safari's engine).
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - run: bun install --frozen-lockfile
+
+      # The three browsers, plus the Linux libraries they need.
+      - run: bunx playwright install --with-deps chromium firefox webkit
+        working-directory: packages/web
+
+      - run: bun run test:e2e
